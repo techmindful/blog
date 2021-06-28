@@ -1,5 +1,7 @@
 module Main exposing (..)
 
+import Blogs.Index
+import Blogs.Types
 import Browser
 import Browser.Navigation as Nav
 import Common.Colors exposing (..)
@@ -32,12 +34,14 @@ import Url.Parser
 type alias Model =
     { route : Route
     , navKey : Nav.Key
+    , blogModels : Blogs.Types.Models
     }
 
 
 type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url
+    | BlogMsg Blogs.Types.Msg
     | Nop
 
 
@@ -50,6 +54,7 @@ init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url navKey =
     ( { route = getRoute url
       , navKey = navKey
+      , blogModels = Blogs.Types.init
       }
     , Cmd.none
     )
@@ -68,6 +73,15 @@ update msg model =
 
         UrlChanged url ->
             ( { model | route = getRoute url }, Cmd.none )
+
+        BlogMsg blogMsg ->
+            let
+                ( blogModels, cmd ) =
+                    Blogs.Types.update blogMsg model.blogModels
+            in
+            ( { model | blogModels = blogModels }
+            , cmd
+            )
 
         Nop ->
             ( model, Cmd.none )
@@ -90,8 +104,17 @@ view model =
                             [ onLeft sidebar ]
                             blogPreviews
 
-                    Blog blogName ->
-                        Debug.todo "show blog"
+                    Blog title ->
+                        let
+                            toShow =
+                                case Blogs.Index.findByTitle model.blogModels title of
+                                    Nothing ->
+                                        text "Error: The URL doesn't match any blog."
+
+                                    Just blog ->
+                                        blog.view
+                        in
+                        Element.map BlogMsg toShow
 
                     NotFound ->
                         paragraph
