@@ -1,17 +1,35 @@
-module Common.Contents exposing (..)
+module Common.Contents exposing
+    ( codeBlock
+    , codeBlock_
+    , codeBlock__
+    , inlineCode
+    , plainPara
+    , underlinedLink
+    , underlinedLink_
+    , underlinedNewTabLink
+    , underlinedNewTabLink_
+    )
 
+import Common.Colors exposing (..)
 import Element
     exposing
         ( Element
+        , column
         , el
         , link
         , newTabLink
+        , padding
+        , paddingXY
         , paragraph
         , rgb255
         , text
         )
 import Element.Background as Background
+import Element.Border as Border
 import Element.Font as Font
+import Html
+import Html.Attributes as HtmlAttr
+import String.Extra as String
 
 
 plainPara : String -> Element msg
@@ -58,5 +76,37 @@ underlinedNewTabLink_ url =
 inlineCode : String -> Element msg
 inlineCode str =
     el
-        [ Background.color <| rgb255 180 180 180 ]
+        [ Background.color codeGray ]
         (text str)
+
+
+mkCodeBlock : String -> Element msg
+mkCodeBlock str =
+    el
+        [ Border.width 2
+        , padding 20
+        , Background.color codeGray
+        ]
+    <|
+        Element.html <|
+            Html.code
+                []
+                [ Html.text str ]
+
+
+{-| Code block, not trimming any whitespace.
+-}
+codeBlock =
+    mkCodeBlock
+
+
+{-| Code block, trimming initial whitespaces
+-}
+codeBlock_ =
+    mkCodeBlock << String.trimLeft
+
+
+{-| Code block, trimming whitespaces on both ends.
+-}
+codeBlock__ =
+    mkCodeBlock << String.trim

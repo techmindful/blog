@@ -9,7 +9,10 @@ module Blogs.Emojis_Elm exposing
 
 import Common.Contents
     exposing
-        ( inlineCode
+        ( codeBlock
+        , codeBlock_
+        , codeBlock__
+        , inlineCode
         , plainPara
         , underlinedNewTabLink
         , underlinedNewTabLink_
@@ -23,22 +26,26 @@ import Element
     exposing
         ( Element
         , column
+        , fill
+        , image
         , paddingXY
         , paragraph
         , spacingXY
         , text
+        , width
         )
 import Element.Font as Font
 import Element.Input as Input
+import Html
+import Markdown
 
 
 type alias Model =
-    { codeInput : String }
+    { unicodeToPathInput : String }
 
 
 type Msg
-    = UserInputCode String
-    | Other
+    = OnUserInputUnicodeToPath String
 
 
 title =
@@ -47,19 +54,16 @@ title =
 
 init : Model
 init =
-    { codeInput = "" }
+    { unicodeToPathInput = "" }
 
 
 update : Msg -> Model -> ( Model, Cmd msg )
 update msg model =
     case msg of
-        UserInputCode str ->
-            ( { model | codeInput = str }
+        OnUserInputUnicodeToPath str ->
+            ( { model | unicodeToPathInput = str }
             , Cmd.none
             )
-
-        _ ->
-            ( model, Cmd.none )
 
 
 view : Model -> Element Msg
@@ -108,4 +112,56 @@ view model =
             , underlinedNewTabLink_ "https://github.com/hfg-gmuend/openmoji"
             , text ". This guide should be still applicable if you choose another vendor."
             ]
+        , paragraph
+            []
+            [ text
+                """
+                To allow emojis in user's input, let's define a new syntax. User can indicate their intention to use an emoji by enclosing a unique identifier for the emoji between two colons, for example 
+                """
+            , inlineCode ":amused:"
+            , text """. This is a common method among popular messaging apps like Element, Slack, Discord, etc. We haven't mapped the descriptive names like "amused" to each emoji yet. But if we take a look at the file names of the emoji images, we can see that they are all in the format of 
+                """
+            , inlineCode "emoji_<unicode>.png"
+            , text """. So wherever user's input string contains a pair of colons, we can try to see if the text in-between matches any emoji unicode, and substitute the piece with an emoji image. We can write a pure function for this! It'll take a string, and convert it into a list of "pieces". A piece is either text, or emoji. Let's define a custom type for it:
+                """
+            ]
+        , codeBlock__
+            """
+type Piece
+    = Text String
+    | Emoji String
+            """
+        , paragraph
+            []
+            [ text "The "
+            , inlineCode "String"
+            , text " in "
+            , inlineCode "Emoji String"
+            , text " is the supposed emoji unicode. For example, "
+            , inlineCode "1f600"
+            , text " should be mapped to "
+            , image
+                []
+                { src = "/static/noto-emoji/32/emoji_u1f600.png"
+                , description = "Emoji of unicode 1f600"
+                }
+            , text "."
+            , text
+                """
+                Can you complete the function to translate an emoji unicode to the file path of its image?
+                """
+            ]
+        , codeBlock_ <|
+            """
+unicodeToPath : String -> String
+unicodeToPath unicode =
+    """
+                ++ model.unicodeToPathInput
+        , Input.text
+            [ width fill ]
+            { onChange = OnUserInputUnicodeToPath
+            , text = model.unicodeToPathInput
+            , placeholder = Nothing
+            , label = Input.labelHidden ""
+            }
         ]
