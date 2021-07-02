@@ -35,8 +35,9 @@ import Element
         , width
         )
 import Element.Font as Font
-import Element.Input as Input
+import Element.Input as Input exposing (button)
 import Html
+import Http
 import Markdown
 
 
@@ -46,6 +47,8 @@ type alias Model =
 
 type Msg
     = OnUserInputUnicodeToPath String
+    | OnUserRunUnicodeToPath
+    | GotRunUnicodeToPathResult (Result Http.Error String)
 
 
 title =
@@ -57,13 +60,29 @@ init =
     { unicodeToPathInput = "" }
 
 
-update : Msg -> Model -> ( Model, Cmd msg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         OnUserInputUnicodeToPath str ->
             ( { model | unicodeToPathInput = str }
             , Cmd.none
             )
+
+        OnUserRunUnicodeToPath ->
+            ( model
+            , Http.request
+                { method = "PUT"
+                , headers = []
+                , url = "/blog-apis/emojis-in-elm/unicode-to-path/"
+                , body = Http.stringBody "text/plain;charset=utf-8" "test"
+                , expect = Http.expectString GotRunUnicodeToPathResult
+                , timeout = Nothing
+                , tracker = Nothing
+                }
+            )
+
+        GotRunUnicodeToPathResult result ->
+            ( model, Cmd.none )
 
 
 view : Model -> Element Msg
@@ -165,5 +184,10 @@ unicodeToPath unicode =
             , text = model.unicodeToPathInput
             , placeholder = Nothing
             , label = Input.labelHidden ""
+            }
+        , button
+            []
+            { onPress = Just OnUserRunUnicodeToPath
+            , label = Element.text "Compile and Run!"
             }
         ]

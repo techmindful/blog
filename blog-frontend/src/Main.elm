@@ -80,7 +80,7 @@ update msg model =
                     Blogs.Types.update blogMsg model.blogModels
             in
             ( { model | blogModels = blogModels }
-            , cmd
+            , Cmd.map BlogMsg cmd
             )
 
         Nop ->

@@ -36,7 +36,7 @@ init =
     }
 
 
-update : Msg -> Models -> ( Models, Cmd msg__ )
+update : Msg -> Models -> ( Models, Cmd Msg )
 update msg_ models =
     case msg_ of
         Emojis_Elm_Msg msg ->
@@ -45,7 +45,7 @@ update msg_ models =
                     Emojis_Elm.update msg models.emojis_Elm_Model
             in
             ( { models | emojis_Elm_Model = model }
-            , cmd
+            , Cmd.map Emojis_Elm_Msg cmd
             )
 
         Inc_Msg msg ->
