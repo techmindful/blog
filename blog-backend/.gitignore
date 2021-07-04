@@ -1,2 +1,6 @@
 .stack-work/
 *~
+
+
+# Don't upload keys!!
+*.aes
