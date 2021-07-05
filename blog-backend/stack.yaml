@@ -1,8 +1,7 @@
 packages:
 - .
 extra-deps:
-- cryptonite-0.28@sha256:b6c75e62b4c655d4cb1bcbb80d01430d136aac32bd6962c86c84738935cc8f9d,18195
-- indexed-traversable-instances-0.1@sha256:3aaf97040001bbe583e29c2b9c7d41660df265e6565a0d2ac09a3ed5b8bc21be,2874
+  #- indexed-traversable-instances-0.1@sha256:3aaf97040001bbe583e29c2b9c7d41660df265e6565a0d2ac09a3ed5b8bc21be,2874
 - optics-0.4@sha256:9fb69bf0195b8d8f1f8cd0098000946868b8a3c3ffb51e5b64f79fc600c3eb4c,6568
 - optics-core-0.4@sha256:59e04aebca536bd011ae50c781937f45af4c1456af1eb9fb578f9a69eee293cd,4995
 - optics-extra-0.4@sha256:b9914f38aa7d5c92f231060d9168447f9f5a367c07df9bf47a003e3e786d5e05,3432
