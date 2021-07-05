@@ -55,7 +55,7 @@ import           GHC.Float ( rationalToFloat )
 import           GHC.Generics ( Generic )
 import           Path ( (</>), Abs, Rel, Dir, File, Path )
 import qualified Path
-import           Path.IO ( doesFileExist )
+import           Path.IO ( createDirIfMissing, doesDirExist, doesFileExist )
 import           System.IO ( appendFile, readFile )
 
 
@@ -114,6 +114,8 @@ server =
           templateFilePath = templatesDirPath </> $(Path.mkRelFile "UnicodeToPath.elm")
 
           usersDirPath = elmDirPath </> $(Path.mkRelDir "src-users/")
+
+      liftIO $ createDirIfMissing False usersDirPath
 
       maybeUserFilePath <-
         liftIO $ runMaybeT $ mkUniqueFilePath
