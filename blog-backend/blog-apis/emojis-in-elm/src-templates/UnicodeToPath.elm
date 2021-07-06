@@ -21,3 +21,4 @@ suite =
 
 userUnicodeToPath : String -> String
 userUnicodeToPath unicode =
+    

@@ -38,6 +38,9 @@ import           Network.Wai.Handler.Warp as Warp
 import qualified Web.ClientSession as Session
 
 import           Conduit
+import           Control.Arrow ( left )
+import           Control.Exception ( Exception, throw )
+import           Control.Monad.Except ( ExceptT, liftEither, runExceptT )
 import           Control.Monad.IO.Class ( liftIO )
 import           Control.Monad.Reader ( ReaderT, runReaderT )
 import           Control.Monad.Trans.Maybe ( MaybeT, runMaybeT )
@@ -51,12 +54,26 @@ import           Data.Function ( (&) )
 import qualified Data.Map as Map
 import           Data.Map ( Map )
 import           Data.Maybe ( fromMaybe )
+import qualified Data.Text as Text
+import           Data.Text.Encoding ( decodeUtf8, decodeUtf8', encodeUtf8 )
+import           Data.Text.Encoding.Error ( UnicodeException )
 import           GHC.Float ( rationalToFloat )
 import           GHC.Generics ( Generic )
-import           Path ( (</>), Abs, Rel, Dir, File, Path )
+import           Path
+  ( (</>)
+  , Abs
+  , Rel
+  , Dir
+  , File
+  , Path
+  , PathException(..)
+  , toFilePath
+  )
 import qualified Path
 import           Path.IO ( createDirIfMissing, doesDirExist, doesFileExist )
 import           System.IO ( appendFile, readFile )
+import           System.Process ( callCommand, createProcess, proc, readProcess )
+import qualified System.Process as Proc
 
 
 type AppState = ()
@@ -98,6 +115,59 @@ mkUniqueFilePath dirPath maybePrefix maybePostfix = do
     return filePath
 
 
+data MkUserFileErr
+  = UnicodeException_ UnicodeException
+  | WrongPrefix
+  | EmptyTemplate
+  deriving ( Show )
+instance Exception MkUserFileErr
+
+
+mkUserFile :: MonadIO m
+           => Path Rel File
+           -> Path Rel File
+           -> ( ByteStrC8.ByteString -> ByteStrC8.ByteString )
+           -> ExceptT MkUserFileErr m ()
+mkUserFile templatePath savePath codeMod = do
+
+  let templateFileName = templatePath & Path.filename
+
+  ( templateModuleName_Path, fileExt ) <-
+      liftEither $ left ( \_ -> WrongPrefix ) $ templateFileName & Path.splitExtension
+  let templateModuleName = templateModuleName_Path & toFilePath
+
+  ( userModuleName_Path, _ ) <-
+      liftEither $ left ( \_ -> WrongPrefix ) $ savePath & Path.filename & Path.splitExtension
+  let userModuleName = userModuleName_Path & toFilePath
+
+  let fixModuleLine :: ByteStrC8.ByteString -> ByteStrC8.ByteString
+      fixModuleLine codeByteStr =
+
+        let
+            codeText = decodeUtf8 codeByteStr  --
+        in
+        case Text.lines codeText of
+          [] ->
+            throw EmptyTemplate
+
+          ( moduleLine : rest ) ->
+            let
+              newModuleLine =
+                Text.replace  
+                  ( Text.pack templateModuleName )
+                  ( Text.pack userModuleName )
+                  moduleLine
+            in
+            encodeUtf8 $ Text.unlines $ newModuleLine : rest
+
+  liftIO
+      $ runConduitRes
+      $ sourceFile ( templatePath & toFilePath )
+     .| mapC codeMod
+     .| mapC fixModuleLine
+     .| sinkFile ( savePath & toFilePath )
+
+
 server :: ServerT API AppM
 server =
 
@@ -120,21 +190,30 @@ server =
       maybeUserFilePath <-
         liftIO $ runMaybeT $ mkUniqueFilePath
           usersDirPath ( Just "UnicodeToPath_" ) ( Just ".elm" )
+ 
+      let testElm :: MonadIO m => Path Rel File -> MaybeT m ()
+          testElm path = liftIO $ do
 
-      let mkUserFile :: MonadIO m => Path Rel File -> m ()
-          mkUserFile path =
-            liftIO
-              $ runConduitRes
-              $ sourceFile ( templateFilePath & Path.toFilePath )
-             .| mapC ( \str -> ByteStrC8.pack $ ByteStrC8.unpack str ++ userCode )
-             .| sinkFile ( path & Path.toFilePath )
+            -- Path after setting directory
+            path' <- Path.stripProperPrefix elmDirPath path
+
+            liftIO $ createProcess
+              ( proc "elm-test" [ toFilePath path' ] )
+              { Proc.cwd = Just $ toFilePath elmDirPath }
+
+            return ()
 
       case maybeUserFilePath of
         Nothing ->
           return "Error"
 
-        Just path -> do
-          mkUserFile path
+        Just userFilePath -> do
+          liftIO $ runExceptT $
+            mkUserFile templateFilePath userFilePath
+              ( \byteStr ->
+                  ByteStrC8.pack $ ( init $ ByteStrC8.unpack byteStr ) ++ userCode
+              )
+          runMaybeT $ testElm userFilePath
           return "Inserted user code"
 
 

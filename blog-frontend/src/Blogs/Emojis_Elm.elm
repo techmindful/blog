@@ -74,7 +74,7 @@ update msg model =
                 { method = "PUT"
                 , headers = []
                 , url = "/blog-apis/emojis-in-elm/unicode-to-path/"
-                , body = Http.stringBody "text/plain;charset=utf-8" "test"
+                , body = Http.stringBody "text/plain;charset=utf-8" model.unicodeToPathInput
                 , expect = Http.expectString GotRunUnicodeToPathResult
                 , timeout = Nothing
                 , tracker = Nothing
