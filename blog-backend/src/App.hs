@@ -3,6 +3,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances #-}    
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -13,6 +14,8 @@
 
 
 module App where
+
+import           RIO hiding ( Handler )
 
 import qualified Servant
 import           Servant
@@ -39,7 +42,7 @@ import qualified Web.ClientSession as Session
 
 import           Conduit
 import           Control.Arrow ( left )
-import           Control.Exception ( Exception, throw, throwIO, try, catch )
+import           Control.Error ( note )
 import           Control.Monad.Except ( ExceptT, liftEither, runExceptT )
 import           Control.Monad.IO.Class ( liftIO )
 import           Control.Monad.Reader ( ReaderT, runReaderT )
@@ -57,6 +60,8 @@ import           Data.Maybe ( fromMaybe )
 import qualified Data.Text as Text
 import           Data.Text.Encoding ( decodeUtf8, decodeUtf8', encodeUtf8 )
 import           Data.Text.Encoding.Error ( UnicodeException )
+import           RIO.ByteString ( readFile, writeFile )
+import           RIO.List ( initMaybe )
 import           GHC.Float ( rationalToFloat )
 import           GHC.Generics ( Generic )
 import           Path
@@ -71,7 +76,6 @@ import           Path
   )
 import qualified Path
 import           Path.IO ( createDirIfMissing, doesDirExist, doesFileExist )
-import           System.IO ( appendFile, readFile )
 import           System.Process ( callCommand, createProcess, proc, readProcess )
 import qualified System.Process as Proc
 
@@ -115,62 +119,83 @@ mkUniqueFilePath dirPath maybePrefix maybePostfix = do
     return filePath
 
 
-data MkUserFileErr
+data MkUserFileError
   = UnicodeException_ UnicodeException
   | WrongPrefix
-  | EmptyTemplate
-  deriving ( Show )
-instance Exception MkUserFileErr
+  | MkUserCodeError_ MkUserCodeError
+  deriving ( Generic, Show )
+instance Exception MkUserFileError
+
+
+data MkUserCodeError
+  = EmptyTemplate
+  | EmptyModdedCode
+  | ModdedCodeUtf8Error 
+  deriving ( Generic, Show )
 
 
 mkUserFile :: Path Rel File
            -> Path Rel File
-           -> ( ByteStrC8.ByteString -> ByteStrC8.ByteString )
+           -> ( ByteString -> Either MkUserCodeError ByteString )
            -> IO ()
 mkUserFile templatePath savePath codeMod = do
 
   let templateFileName = templatePath & Path.filename
 
+  -- TODO: Switch function to take templateDirPath and moduleName.
+  --       Then change to handle exceptions where corresponding module file isn't found.
+  --       Switch to use catch.
   ( templateModuleName_Path, fileExt ) <-
-      catch
+      onException
         ( templateFileName & Path.splitExtension )
-        ( \ ( e :: PathException ) -> throwIO WrongPrefix )
+        ( throwIO WrongPrefix )
 
   let templateModuleName = templateModuleName_Path & toFilePath
 
   ( userModuleName_Path, _ ) <-
-      catch
+      onException
         ( savePath & Path.filename & Path.splitExtension )
-        ( \ ( e :: PathException ) -> throwIO WrongPrefix )
+        ( throwIO WrongPrefix )
 
   let userModuleName = userModuleName_Path & toFilePath
 
-  let fixModuleLine :: ByteStrC8.ByteString -> ByteStrC8.ByteString
-      fixModuleLine codeByteStr =
+  let fixModuleLine :: ByteStrC8.ByteString -> Either MkUserCodeError ByteStrC8.ByteString
+      fixModuleLine codeByteStr = do
 
-        let
-            codeText = decodeUtf8 codeByteStr  --
-        in
+        codeText <- left ( \_ -> ModdedCodeUtf8Error ) ( decodeUtf8' codeByteStr )
+
         case Text.lines codeText of
-          [] ->
-            throw EmptyTemplate
+          [] -> Left EmptyModdedCode
 
           ( moduleLine : rest ) ->
-            let
-              newModuleLine =
-                Text.replace  
-                  ( Text.pack templateModuleName )
-                  ( Text.pack userModuleName )
-                  moduleLine
-            in
-            encodeUtf8 $ Text.unlines $ newModuleLine : rest
+              let
+                newModuleLine =
+                  Text.replace  
+                    ( Text.pack templateModuleName )
+                    ( Text.pack userModuleName )
+                    moduleLine
+              in
+              Right $ encodeUtf8 $ Text.unlines $ newModuleLine : rest
 
-  liftIO
-      $ runConduitRes
-      $ sourceFile ( templatePath & toFilePath )
-     .| mapC codeMod
-     .| mapC fixModuleLine
-     .| sinkFile ( savePath & toFilePath )
+  templateCode <- readFile $ templatePath & toFilePath
+
+  let resultUserCode :: Either MkUserCodeError ByteString
+      resultUserCode = do
+        moddedCode <- codeMod templateCode
+        fixedCode  <- fixModuleLine moddedCode
+        pure fixedCode
+
+  case resultUserCode of
+    Left mkUserCodeError -> throwIO $ MkUserCodeError_ mkUserCodeError
+    Right userCode ->
+      writeFile ( savePath & toFilePath ) userCode
+
+  --liftIO
+  --    $ runConduitRes
+  --    $ sourceFile ( templatePath & toFilePath )
+  --   .| mapMC codeMod
+  --   .| mapMC fixModuleLine
+  --   .| sinkFile ( savePath & toFilePath )
 
 
 server :: ServerT API AppM
@@ -186,7 +211,7 @@ server =
       let elmDirPath = $(Path.mkRelDir "blog-apis/emojis-in-elm/")
 
           templatesDirPath = elmDirPath </> $(Path.mkRelDir "src-templates/")
-          templateFilePath = templatesDirPath </> $(Path.mkRelFile "WrongPrefix")
+          templateFilePath = templatesDirPath </> $(Path.mkRelFile "UnicodeToPath.elm")
 
           usersDirPath = elmDirPath </> $(Path.mkRelDir "src-users/")
 
@@ -213,11 +238,14 @@ server =
           return "Error"
 
         Just userFilePath -> do
-          liftIO $
-            mkUserFile templateFilePath userFilePath
-              ( \byteStr ->
-                  ByteStrC8.pack $ ( init $ ByteStrC8.unpack byteStr ) ++ userCode
-              )
+
+          let codeMod :: ByteStrC8.ByteString -> Either MkUserCodeError ByteStrC8.ByteString
+              codeMod templateCode = do
+                -- Trim trailing newline.
+                initStr <- note EmptyTemplate $ initMaybe $ ByteStrC8.unpack templateCode
+                pure $ ByteStrC8.pack $ initStr ++ userCode
+
+          liftIO $ mkUserFile templateFilePath userFilePath codeMod
           runMaybeT $ testElm userFilePath
           return "Inserted user code"
 
@@ -235,7 +263,6 @@ runApp :: IO ()
 runApp = do
 
   sessionEncryptionKey <- Session.getDefaultKey
-  putStrLn $ show sessionEncryptionKey
 
   Warp.run 9000 $ mkApp ()
 
