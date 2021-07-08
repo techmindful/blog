@@ -39,7 +39,7 @@ import qualified Web.ClientSession as Session
 
 import           Conduit
 import           Control.Arrow ( left )
-import           Control.Exception ( Exception, throw )
+import           Control.Exception ( Exception, throw, throwIO, try, catch )
 import           Control.Monad.Except ( ExceptT, liftEither, runExceptT )
 import           Control.Monad.IO.Class ( liftIO )
 import           Control.Monad.Reader ( ReaderT, runReaderT )
@@ -123,21 +123,26 @@ data MkUserFileErr
 instance Exception MkUserFileErr
 
 
-mkUserFile :: MonadIO m
-           => Path Rel File
+mkUserFile :: Path Rel File
            -> Path Rel File
            -> ( ByteStrC8.ByteString -> ByteStrC8.ByteString )
-           -> ExceptT MkUserFileErr m ()
+           -> IO ()
 mkUserFile templatePath savePath codeMod = do
 
   let templateFileName = templatePath & Path.filename
 
   ( templateModuleName_Path, fileExt ) <-
-      liftEither $ left ( \_ -> WrongPrefix ) $ templateFileName & Path.splitExtension
+      catch
+        ( templateFileName & Path.splitExtension )
+        ( \ ( e :: PathException ) -> throwIO WrongPrefix )
+
   let templateModuleName = templateModuleName_Path & toFilePath
 
   ( userModuleName_Path, _ ) <-
-      liftEither $ left ( \_ -> WrongPrefix ) $ savePath & Path.filename & Path.splitExtension
+      catch
+        ( savePath & Path.filename & Path.splitExtension )
+        ( \ ( e :: PathException ) -> throwIO WrongPrefix )
+
   let userModuleName = userModuleName_Path & toFilePath
 
   let fixModuleLine :: ByteStrC8.ByteString -> ByteStrC8.ByteString
@@ -181,7 +186,7 @@ server =
       let elmDirPath = $(Path.mkRelDir "blog-apis/emojis-in-elm/")
 
           templatesDirPath = elmDirPath </> $(Path.mkRelDir "src-templates/")
-          templateFilePath = templatesDirPath </> $(Path.mkRelFile "UnicodeToPath.elm")
+          templateFilePath = templatesDirPath </> $(Path.mkRelFile "WrongPrefix")
 
           usersDirPath = elmDirPath </> $(Path.mkRelDir "src-users/")
 
@@ -208,7 +213,7 @@ server =
           return "Error"
 
         Just userFilePath -> do
-          liftIO $ runExceptT $
+          liftIO $
             mkUserFile templateFilePath userFilePath
               ( \byteStr ->
                   ByteStrC8.pack $ ( init $ ByteStrC8.unpack byteStr ) ++ userCode
