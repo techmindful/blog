@@ -16,6 +16,7 @@
 module App where
 
 import           RIO hiding ( Handler )
+import           Prelude ( putStrLn )
 
 import qualified Servant
 import           Servant
@@ -57,10 +58,9 @@ import           Data.Function ( (&) )
 import qualified Data.Map as Map
 import           Data.Map ( Map )
 import           Data.Maybe ( fromMaybe )
-import qualified Data.Text as Text
-import           Data.Text.Encoding ( decodeUtf8, decodeUtf8', encodeUtf8 )
-import           Data.Text.Encoding.Error ( UnicodeException )
 import           RIO.ByteString ( readFile, writeFile )
+import qualified RIO.Text as Text
+import           RIO.Text ( decodeUtf8', encodeUtf8 )
 import           RIO.List ( initMaybe )
 import           GHC.Float ( rationalToFloat )
 import           GHC.Generics ( Generic )
@@ -90,41 +90,12 @@ type API = "blog-apis" :> "emojis-in-elm" :> "unicode-to-path"
 type AppM = ReaderT AppState Handler
 
 
-getRandomHash :: IO String
+getRandomHash :: IO Text
 getRandomHash = do
   seed <- seedNew
   let seedStr = show $ seedToInteger seed
-      hash    = show $ hashWith SHA256 $ ByteStrC8.pack seedStr
-  return hash
-
-
-mkUniqueFilePath :: Path Rel Dir
-                 -> Maybe String
-                 -> Maybe String
-                 -> MaybeT IO ( Path Rel File )
-mkUniqueFilePath dirPath maybePrefix maybePostfix = do
-
-  randomHash <- liftIO getRandomHash
-
-  let fileNameStr = fromMaybe "" maybePrefix ++ randomHash ++ fromMaybe "" maybePostfix
-
-  fileName <- Path.parseRelFile fileNameStr
-
-  let filePath = dirPath </> fileName
-
-  isCollided <- liftIO $ doesFileExist filePath
-  if isCollided then
-    mkUniqueFilePath dirPath maybePrefix maybePostfix
-  else
-    return filePath
-
-
-data MkUserFileError
-  = UnicodeException_ UnicodeException
-  | WrongPrefix
-  | MkUserCodeError_ MkUserCodeError
-  deriving ( Generic, Show )
-instance Exception MkUserFileError
+      hashStr = show $ hashWith SHA256 $ ByteStrC8.pack seedStr
+  pure $ Text.pack hashStr
 
 
 data MkUserCodeError
@@ -132,70 +103,89 @@ data MkUserCodeError
   | EmptyModdedCode
   | ModdedCodeUtf8Error 
   deriving ( Generic, Show )
+instance Exception MkUserCodeError
 
 
-mkUserFile :: Path Rel File
-           -> Path Rel File
-           -> ( ByteString -> Either MkUserCodeError ByteString )
-           -> IO ()
-mkUserFile templatePath savePath codeMod = do
+{-|
+  Try to make a user file.
 
-  let templateFileName = templatePath & Path.filename
+  Caller is responsible for providing a valid `Path Rel File` as `templateModuleName`,
+  and let the function add an extension that's guaranteed to be valid, ".elm",
+  instead of letting function try to split a correct extension out.
 
-  -- TODO: Switch function to take templateDirPath and moduleName.
-  --       Then change to handle exceptions where corresponding module file isn't found.
-  --       Switch to use catch.
-  ( templateModuleName_Path, fileExt ) <-
-      onException
-        ( templateFileName & Path.splitExtension )
-        ( throwIO WrongPrefix )
+  Excluding unlikely ones, these exceptions may be thrown:
+  * MkUserCodeError
+  * File read/write errors.
+-}
+tryMkUserFile :: Path Rel Dir
+              -> Path Rel File
+              -> Path Rel Dir
+              -> ( ByteString -> Either MkUserCodeError ByteString )
+              -> IO ( Path Rel File )
+tryMkUserFile templateDirPath templateModuleName userDirPath codeMod = do
 
-  let templateModuleName = templateModuleName_Path & toFilePath
+  withException
+    mkUserFile
+    ( \ ( e :: MkUserCodeError ) ->
+        putStrLn $ "Error: " ++ show e
+    )
 
-  ( userModuleName_Path, _ ) <-
-      onException
-        ( savePath & Path.filename & Path.splitExtension )
-        ( throwIO WrongPrefix )
+  where
+    mkUserFile = do
 
-  let userModuleName = userModuleName_Path & toFilePath
+      let ext = ".elm"
 
-  let fixModuleLine :: ByteStrC8.ByteString -> Either MkUserCodeError ByteStrC8.ByteString
-      fixModuleLine codeByteStr = do
+      let templateModuleNameText = Text.pack $ templateModuleName & toFilePath
 
-        codeText <- left ( \_ -> ModdedCodeUtf8Error ) ( decodeUtf8' codeByteStr )
+      -- Make template file info.
+      --   We'll ignore the possibility of InvalidExtension exception here,
+      --   Since we know ".elm" is a valid extension.
+      ( templateFileName :: Path Rel File ) <- Path.addExtension ext templateModuleName
+      let templateFilePath = templateDirPath </> templateFileName
 
-        case Text.lines codeText of
-          [] -> Left EmptyModdedCode
+      -- Make user file info.
+      randomHash <- getRandomHash
+      let userModuleNameText =
+            Text.concat [ templateModuleNameText, "_", randomHash ]
+      -- Ignoring InvalidRelFile exception, since appending hash shouldn't cause path exceptions.
+      ( userModuleName :: Path Rel File ) <- Path.parseRelFile $ Text.unpack userModuleNameText 
+      -- Ignoring InvalidExtension exception just like above with the template.
+      userFileName <- Path.addExtension ext userModuleName
+      let userFilePath = userDirPath </> userFileName
 
-          ( moduleLine : rest ) ->
-              let
-                newModuleLine =
-                  Text.replace  
-                    ( Text.pack templateModuleName )
-                    ( Text.pack userModuleName )
-                    moduleLine
-              in
-              Right $ encodeUtf8 $ Text.unlines $ newModuleLine : rest
+      let fixModuleLine :: ByteStrC8.ByteString -> Either MkUserCodeError ByteStrC8.ByteString
+          fixModuleLine codeByteStr = do
 
-  templateCode <- readFile $ templatePath & toFilePath
+            codeText <- left ( \_ -> ModdedCodeUtf8Error ) ( decodeUtf8' codeByteStr )
 
-  let resultUserCode :: Either MkUserCodeError ByteString
-      resultUserCode = do
-        moddedCode <- codeMod templateCode
-        fixedCode  <- fixModuleLine moddedCode
-        pure fixedCode
+            case Text.lines codeText of
+              [] -> Left EmptyModdedCode
 
-  case resultUserCode of
-    Left mkUserCodeError -> throwIO $ MkUserCodeError_ mkUserCodeError
-    Right userCode ->
-      writeFile ( savePath & toFilePath ) userCode
+              ( moduleLine : rest ) ->
+                  let
+                    newModuleLine =
+                      Text.unwords $ map
+                        ( \word ->
+                            if word == templateModuleNameText then userModuleNameText
+                            else word
+                        )
+                        ( Text.words moduleLine )
+                  in
+                  Right $ encodeUtf8 $ Text.unlines $ newModuleLine : rest
 
-  --liftIO
-  --    $ runConduitRes
-  --    $ sourceFile ( templatePath & toFilePath )
-  --   .| mapMC codeMod
-  --   .| mapMC fixModuleLine
-  --   .| sinkFile ( savePath & toFilePath )
+      templateCode <- readFile $ templateFilePath & toFilePath
+
+      let resultUserCode :: Either MkUserCodeError ByteString
+          resultUserCode = do
+            moddedCode <- codeMod templateCode
+            fixedCode  <- fixModuleLine moddedCode
+            pure fixedCode
+
+      case resultUserCode of
+        Left mkUserCodeError -> throwIO $ mkUserCodeError
+        Right userCode -> do
+          writeFile ( userFilePath & toFilePath ) userCode
+          pure userFilePath
 
 
 server :: ServerT API AppM
@@ -210,17 +200,19 @@ server =
 
       let elmDirPath = $(Path.mkRelDir "blog-apis/emojis-in-elm/")
 
-          templatesDirPath = elmDirPath </> $(Path.mkRelDir "src-templates/")
-          templateFilePath = templatesDirPath </> $(Path.mkRelFile "UnicodeToPath.elm")
+          templatesDirPath   = elmDirPath </> $(Path.mkRelDir "src-templates/")
+          templateModuleName = $(Path.mkRelFile "UnicodeToPath")
 
           usersDirPath = elmDirPath </> $(Path.mkRelDir "src-users/")
 
       liftIO $ createDirIfMissing False usersDirPath
 
-      maybeUserFilePath <-
-        liftIO $ runMaybeT $ mkUniqueFilePath
-          usersDirPath ( Just "UnicodeToPath_" ) ( Just ".elm" )
- 
+      let codeMod :: ByteStrC8.ByteString -> Either MkUserCodeError ByteStrC8.ByteString
+          codeMod templateCode = do
+            -- Trim trailing newline.
+            initStr <- note EmptyTemplate $ initMaybe $ ByteStrC8.unpack templateCode
+            pure $ ByteStrC8.pack $ initStr ++ userCode
+
       let testElm :: MonadIO m => Path Rel File -> MaybeT m ()
           testElm path = liftIO $ do
 
@@ -233,21 +225,10 @@ server =
 
             return ()
 
-      case maybeUserFilePath of
-        Nothing ->
-          return "Error"
+      userFilePath <- liftIO $ tryMkUserFile templatesDirPath templateModuleName usersDirPath codeMod
+      runMaybeT $ testElm userFilePath
 
-        Just userFilePath -> do
-
-          let codeMod :: ByteStrC8.ByteString -> Either MkUserCodeError ByteStrC8.ByteString
-              codeMod templateCode = do
-                -- Trim trailing newline.
-                initStr <- note EmptyTemplate $ initMaybe $ ByteStrC8.unpack templateCode
-                pure $ ByteStrC8.pack $ initStr ++ userCode
-
-          liftIO $ mkUserFile templateFilePath userFilePath codeMod
-          runMaybeT $ testElm userFilePath
-          return "Inserted user code"
+      return "Inserted user code"
 
 
 api :: Servant.Proxy API
