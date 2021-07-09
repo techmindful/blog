@@ -39,30 +39,21 @@ import           Servant
   )
 import           Network.Wai as Wai
 import           Network.Wai.Handler.Warp as Warp
-import qualified Web.ClientSession as Session
 
 import           Conduit
 import           Control.Arrow ( left )
 import           Control.Error ( note )
-import           Control.Monad.Except ( ExceptT, liftEither, runExceptT )
 import           Control.Monad.IO.Class ( liftIO )
 import           Control.Monad.Reader ( ReaderT, runReaderT )
 import           Control.Monad.Trans.Maybe ( MaybeT, runMaybeT )
-import           Control.Concurrent.STM ( TVar, atomically, newTVar, readTVar, writeTVar )
 import           Crypto.Random ( seedNew, seedToInteger )
 import           Crypto.Hash ( SHA256(..), hashWith )
-import           Data.Aeson ( FromJSON, ToJSON )
-import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteString.Char8 as ByteStrC8
 import           Data.Function ( (&) )
-import qualified Data.Map as Map
-import           Data.Map ( Map )
-import           Data.Maybe ( fromMaybe )
 import           RIO.ByteString ( readFile, writeFile )
 import qualified RIO.Text as Text
 import           RIO.Text ( decodeUtf8', encodeUtf8 )
 import           RIO.List ( initMaybe )
-import           GHC.Float ( rationalToFloat )
 import           GHC.Generics ( Generic )
 import           Path
   ( (</>)
@@ -126,8 +117,15 @@ tryMkUserFile templateDirPath templateModuleName userDirPath codeMod = do
 
   withException
     mkUserFile
-    ( \ ( e :: MkUserCodeError ) ->
-        putStrLn $ "Error: " ++ show e
+    ( \ ( e :: MkUserCodeError ) -> do
+        putStrLn $ "[ Exception ] "
+                ++ show e
+                ++ " occurred on tryMkUserFile."
+
+        putStrLn $ "templateDirPath: " ++ toFilePath templateDirPath
+        putStrLn $ "templateModuleName: " ++ toFilePath templateModuleName
+        putStrLn $ "userDirPath: " ++ toFilePath userDirPath
+        putStrLn $ "With some codeMod."
     )
 
   where
@@ -242,8 +240,6 @@ mkApp appState =
 
 runApp :: IO ()
 runApp = do
-
-  sessionEncryptionKey <- Session.getDefaultKey
 
   Warp.run 9000 $ mkApp ()
 
