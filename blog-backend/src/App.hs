@@ -18,56 +18,40 @@ module App where
 import           RIO hiding ( Handler )
 import           Prelude ( putStrLn )
 
-import qualified Servant
 import           Servant
   ( (:>)
-  , (:<|>)(..)
-  , Context(..)
-  , Capture
-  , Get
   , Handler
   , PlainText
   , Proxy(..)
   , Put
   , ReqBody
   , ServerT
-  , err401
   , hoistServer
-  , hoistServerWithContext
   , serve
-  , serveWithContext
   )
 import           Network.Wai as Wai
 import           Network.Wai.Handler.Warp as Warp
 
-import           Conduit
 import           Control.Arrow ( left )
 import           Control.Error ( note )
-import           Control.Monad.IO.Class ( liftIO )
-import           Control.Monad.Reader ( ReaderT, runReaderT )
 import           Control.Monad.Trans.Maybe ( MaybeT, runMaybeT )
 import           Crypto.Random ( seedNew, seedToInteger )
 import           Crypto.Hash ( SHA256(..), hashWith )
 import qualified Data.ByteString.Char8 as ByteStrC8
-import           Data.Function ( (&) )
 import           RIO.ByteString ( readFile, writeFile )
-import qualified RIO.Text as Text
-import           RIO.Text ( decodeUtf8', encodeUtf8 )
 import           RIO.List ( initMaybe )
-import           GHC.Generics ( Generic )
+import qualified RIO.Text as Text
 import           Path
   ( (</>)
-  , Abs
   , Rel
   , Dir
   , File
   , Path
-  , PathException(..)
   , toFilePath
   )
 import qualified Path
-import           Path.IO ( createDirIfMissing, doesDirExist, doesFileExist )
-import           System.Process ( callCommand, createProcess, proc, readProcess )
+import           Path.IO ( createDirIfMissing ) 
+import           System.Process ( createProcess, proc )
 import qualified System.Process as Proc
 
 
@@ -217,14 +201,14 @@ server =
             -- Path after setting directory
             path' <- Path.stripProperPrefix elmDirPath path
 
-            liftIO $ createProcess
+            _ <- liftIO $ createProcess
               ( proc "elm-test" [ toFilePath path' ] )
               { Proc.cwd = Just $ toFilePath elmDirPath }
 
             return ()
 
       userFilePath <- liftIO $ tryMkUserFile templatesDirPath templateModuleName usersDirPath codeMod
-      runMaybeT $ testElm userFilePath
+      _ <- runMaybeT $ testElm userFilePath
 
       return "Inserted user code"
 
