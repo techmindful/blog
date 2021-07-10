@@ -3,9 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module ElmTest
-  ( ElmTestResp
-  , ElmTestResult
-  , resultToResp
+  ( ElmTestResult
   , runElmTest
   ) where
 
@@ -14,9 +12,12 @@ import           Prelude ( putStrLn )
 
 import           Data.Aeson as Aeson
   ( FromJSON(..)
-  , ToJSON
+  , Value( Null )
+  , ToJSON(..)
   , (.:)
+  , (.=)
   , decodeStrict
+  , object
   , withObject
   )
 import qualified Data.ByteString.Char8 as ByteStrC8
@@ -33,28 +34,26 @@ import           System.Process ( CreateProcess(..), StdStream( CreatePipe ), cr
 import qualified System.Process as Proc
 
 
-data ElmTestResp = ElmTestResp
-  --{ compiled :: Bool
-  --, compileMsg :: Text
-  --, passed :: Bool
-  --, actual :: Text
-  deriving ( Generic, Show )
-instance ToJSON ElmTestResp
-
-
-resultToResp :: ElmTestResult -> ElmTestResp
-resultToResp _ =
-  ElmTestResp
-  --case result of
-  --  CompileFailure msg ->
-
-
 data ElmTestResult
-  = CompileFailure ByteString
+  = CompileFailure Text
   | TestFailure ElmTestExpected ElmTestActual
   | Pass
-  | JsonError
+  | InternalJsonError
   deriving ( Generic, Show )
+instance ToJSON ElmTestResult where
+  toJSON result =
+    case result of
+      CompileFailure compilerMsg ->
+        object [ "compilerError" .= compilerMsg ]
+
+      TestFailure _ actual_ ->
+        object [ "pass" .= False, "actual" .= ( actual_ & getElmTestActual ) ]
+
+      Pass ->
+        object [ "pass" .= True ]
+
+      InternalJsonError ->
+        Null
 
 
 newtype ElmTestExpected = ElmTestExpected
@@ -63,7 +62,7 @@ newtype ElmTestExpected = ElmTestExpected
 
 
 newtype ElmTestActual = ElmTestActual
-  { getElmTestActual   :: Text }
+  { getElmTestActual :: Text }
   deriving ( Generic, Show )
 
 
@@ -121,7 +120,7 @@ runElmTest elmDirRoot elmFilePath = do
 
   -- Compile fails
   if not $ ByteStr.null err then
-    pure $ CompileFailure err
+    pure $ CompileFailure $ decodeUtf8With lenientDecode err
   -- Compile succeeds.
   else do
     -- Filter out test events unrelated to the result.
@@ -149,7 +148,7 @@ runElmTest elmDirRoot elmFilePath = do
                   )
 
           case maybeResult of
-            Nothing -> pure JsonError
+            Nothing -> pure InternalJsonError
             Just ( expected_, actual_ ) ->
               pure $ TestFailure expected_ actual_
 
@@ -158,8 +157,8 @@ runElmTest elmDirRoot elmFilePath = do
           pure Pass
                 
       [] ->
-        pure JsonError
+        pure InternalJsonError
 
       _ : _ -> do
         putStrLn "Multiple test runs?"
-        pure JsonError
+        pure InternalJsonError
