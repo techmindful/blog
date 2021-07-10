@@ -1,5 +1,6 @@
 module Common.Contents exposing
-    ( codeBlock
+    ( borderedButton
+    , codeBlock
     , codeBlock_
     , codeBlock__
     , inlineCode
@@ -11,6 +12,7 @@ module Common.Contents exposing
     )
 
 import Common.Colors exposing (..)
+import Common.Styles exposing (roundedBorder)
 import Element
     exposing
         ( Element
@@ -27,6 +29,7 @@ import Element
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
+import Element.Input as Input exposing (button)
 import Html
 import Html.Attributes as HtmlAttr
 import String.Extra as String
@@ -70,6 +73,15 @@ underlinedNewTabLink_ url =
         [ Font.underline ]
         { url = url
         , label = text url
+        }
+
+
+borderedButton : msg_ -> String -> Element msg_
+borderedButton msg labelStr =
+    button
+        roundedBorder
+        { onPress = Just msg
+        , label = Element.text labelStr
         }
 
 

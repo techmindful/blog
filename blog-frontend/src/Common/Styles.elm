@@ -5,6 +5,7 @@ import Element
         ( padding
         , spacingXY
         )
+import Element.Border as Border
 import Element.Font as Font
 
 
@@ -21,3 +22,11 @@ blogViewPadding =
 paraSpacing : Element.Attribute msg
 paraSpacing =
     spacingXY 0 20
+
+
+roundedBorder : List (Element.Attribute msg)
+roundedBorder =
+    [ Border.width 2
+    , Border.rounded 6
+    , padding 5
+    ]

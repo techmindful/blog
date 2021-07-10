@@ -7,9 +7,16 @@ module Blogs.Emojis_Elm exposing
     , view
     )
 
+import BackendElmResp
+    exposing
+        ( ElmTestResp
+        , elmTestRespDecoder
+        , elmTestRespToTitle
+        )
 import Common.Contents
     exposing
-        ( codeBlock
+        ( borderedButton
+        , codeBlock
         , codeBlock_
         , codeBlock__
         , inlineCode
@@ -28,12 +35,14 @@ import Element
         , column
         , fill
         , image
+        , padding
         , paddingXY
         , paragraph
         , spacingXY
         , text
         , width
         )
+import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input exposing (button)
 import Html
@@ -42,13 +51,17 @@ import Markdown
 
 
 type alias Model =
-    { unicodeToPathInput : String }
+    { unicodeToPathInput : String
+    , unicodeToPathResp : Maybe ElmTestResp
+    , isUnicodeToPathSkipped : Bool
+    , error : Maybe Http.Error
+    }
 
 
 type Msg
     = OnUserInputUnicodeToPath String
     | OnUserRunUnicodeToPath
-    | GotRunUnicodeToPathResult (Result Http.Error String)
+    | GotRunUnicodeToPathResp (Result Http.Error ElmTestResp)
 
 
 title =
@@ -57,7 +70,11 @@ title =
 
 init : Model
 init =
-    { unicodeToPathInput = "" }
+    { unicodeToPathInput = ""
+    , unicodeToPathResp = Nothing
+    , isUnicodeToPathSkipped = False
+    , error = Nothing
+    }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -75,18 +92,44 @@ update msg model =
                 , headers = []
                 , url = "/blog-apis/emojis-in-elm/unicode-to-path/"
                 , body = Http.stringBody "text/plain;charset=utf-8" model.unicodeToPathInput
-                , expect = Http.expectString GotRunUnicodeToPathResult
+                , expect = Http.expectJson GotRunUnicodeToPathResp elmTestRespDecoder
                 , timeout = Nothing
                 , tracker = Nothing
                 }
             )
 
-        GotRunUnicodeToPathResult result ->
-            ( model, Cmd.none )
+        GotRunUnicodeToPathResp result ->
+            case result of
+                Err httpError ->
+                    ( { model | error = Just httpError }
+                    , Cmd.none
+                    )
+
+                Ok resp ->
+                    ( { model | unicodeToPathResp = Just resp }
+                    , Cmd.none
+                    )
 
 
 view : Model -> Element Msg
 view model =
+    let
+        unicodeToPathRespView : Element msg
+        unicodeToPathRespView =
+            column
+                [ padding 10
+                , width fill
+                , Border.width 2
+                ]
+            <|
+                case model.unicodeToPathResp of
+                    Nothing ->
+                        [ text "Run the code and result will be displayed." ]
+
+                    Just resp ->
+                        [ text <| "Result: " ++ elmTestRespToTitle resp ++ "!"
+                        ]
+    in
     column
         [ blogViewPadding
         , paraSpacing
@@ -178,6 +221,7 @@ unicodeToPath : String -> String
 unicodeToPath unicode =
     """
                 ++ model.unicodeToPathInput
+        , unicodeToPathRespView
         , Input.text
             [ width fill ]
             { onChange = OnUserInputUnicodeToPath
@@ -185,9 +229,5 @@ unicodeToPath unicode =
             , placeholder = Nothing
             , label = Input.labelHidden ""
             }
-        , button
-            []
-            { onPress = Just OnUserRunUnicodeToPath
-            , label = Element.text "Compile and Run!"
-            }
+        , borderedButton OnUserRunUnicodeToPath "Compile and Run!"
         ]
