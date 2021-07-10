@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       App
+      ElmTest
   other-modules:
       Paths_blog_backend
   hs-source-dirs:
