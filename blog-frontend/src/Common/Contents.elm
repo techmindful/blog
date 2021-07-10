@@ -19,6 +19,7 @@ import Element
         ( Element
         , column
         , el
+        , fill
         , link
         , newTabLink
         , padding
@@ -26,13 +27,14 @@ import Element
         , paragraph
         , rgb255
         , text
+        , width
         )
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input exposing (button)
 import Html
-import Html.Attributes as HtmlAttr
+import Html.Attributes as HtmlAttr exposing (style)
 import String.Extra as String
 
 
@@ -100,17 +102,26 @@ inlineCode str =
         (text str)
 
 
-mkCodeBlock : String -> Element msg
-mkCodeBlock str =
+mkCodeBlock : Bool -> String -> Element msg
+mkCodeBlock widthFill str =
     el
-        [ Border.width 2
-        , padding 20
-        , Background.color codeGray
-        ]
+        ([ Border.width 2
+         , padding 20
+         , Background.color codeGray
+         ]
+            ++ (if widthFill then
+                    [ width fill ]
+
+                else
+                    []
+               )
+        )
     <|
         Element.html <|
             Html.code
-                []
+                [ style "white-space" "pre-wrap"
+                , style "word-wrap" "break-word"
+                ]
                 [ Html.text str ]
 
 
@@ -122,11 +133,11 @@ codeBlock =
 
 {-| Code block, trimming initial whitespaces
 -}
-codeBlock_ =
-    mkCodeBlock << String.trimLeft
+codeBlock_ widthFill =
+    mkCodeBlock widthFill << String.trimLeft
 
 
 {-| Code block, trimming whitespaces on both ends.
 -}
-codeBlock__ =
-    mkCodeBlock << String.trim
+codeBlock__ widthFill =
+    mkCodeBlock widthFill << String.trim

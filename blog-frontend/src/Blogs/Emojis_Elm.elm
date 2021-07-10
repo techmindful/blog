@@ -33,6 +33,7 @@ import Element
     exposing
         ( Element
         , column
+        , el
         , fill
         , image
         , padding
@@ -120,7 +121,8 @@ view model =
             "/static/noto-emoji/32/emoji_u1f600.png"
     in
     column
-        [ blogViewPadding
+        [ width fill
+        , blogViewPadding
         , paraSpacing
         ]
         [ paragraph
@@ -176,8 +178,11 @@ view model =
             , text """. So wherever user's input string contains a pair of colons, we can try to see if the text in-between matches any emoji unicode, and substitute the piece with an emoji image. We can write a pure function for this! It'll take a string, and convert it into a list of "pieces". A piece is either text, or emoji. Let's define a custom type for it:
                 """
             ]
-        , codeBlock__
-            """
+        , el
+            [ width fill ]
+          <|
+            codeBlock__ False
+                """
 type Piece
     = Text String
     | Emoji String
@@ -204,12 +209,15 @@ type Piece
                 Can you complete the function to translate an emoji unicode to the file path of its image?
                 """
             ]
-        , codeBlock_ <|
-            """
+        , el
+            [ width fill ]
+          <|
+            codeBlock_ True <|
+                """
 unicodeToPath : String -> String
 unicodeToPath unicode =
     """
-                ++ model.unicodeToPathInput
+                    ++ model.unicodeToPathInput
         , elmTestRespView
             model.unicodeToPathResp
             (String.quote grinEmojiPath)
