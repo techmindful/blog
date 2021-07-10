@@ -77,7 +77,7 @@ getRandomHash = do
 data MkUserCodeError
   = EmptyTemplate
   | EmptyModdedCode
-  | ModdedCodeUtf8Error 
+  | TemplateUtf8Error 
   deriving ( Generic, Show )
 instance Exception MkUserCodeError
 
@@ -96,7 +96,7 @@ instance Exception MkUserCodeError
 tryMkUserFile :: Path Rel Dir
               -> Path Rel File
               -> Path Rel Dir
-              -> ( ByteString -> Either MkUserCodeError ByteString )
+              -> ( Text -> Either MkUserCodeError Text )
               -> IO ( Path Rel File )
 tryMkUserFile templateDirPath templateModuleName userDirPath codeMod = do
 
@@ -136,10 +136,8 @@ tryMkUserFile templateDirPath templateModuleName userDirPath codeMod = do
       userFileName <- Path.addExtension ext userModuleName
       let userFilePath = userDirPath </> userFileName
 
-      let fixModuleLine :: ByteStrC8.ByteString -> Either MkUserCodeError ByteStrC8.ByteString
-          fixModuleLine codeByteStr = do
-
-            codeText <- left ( \_ -> ModdedCodeUtf8Error ) ( decodeUtf8' codeByteStr )
+      let fixModuleLine :: Text -> Either MkUserCodeError Text
+          fixModuleLine codeText = do 
 
             case Text.lines codeText of
               [] -> Left EmptyModdedCode
@@ -154,12 +152,18 @@ tryMkUserFile templateDirPath templateModuleName userDirPath codeMod = do
                         )
                         ( Text.words moduleLine )
                   in
-                  Right $ encodeUtf8 $ Text.unlines $ newModuleLine : rest
+                  Right $ Text.unlines $ newModuleLine : rest
 
-      templateCode <- readFile $ templateFilePath & toFilePath
 
-      let resultUserCode :: Either MkUserCodeError ByteString
+      templateCodeByteStr <- readFile $ templateFilePath & toFilePath
+
+      let resultUserCode :: Either MkUserCodeError Text
           resultUserCode = do
+
+            templateCode <-
+              left ( \_ -> TemplateUtf8Error )
+                   ( decodeUtf8' templateCodeByteStr )
+
             moddedCode <- codeMod templateCode
             fixedCode  <- fixModuleLine moddedCode
             pure fixedCode
@@ -167,7 +171,7 @@ tryMkUserFile templateDirPath templateModuleName userDirPath codeMod = do
       case resultUserCode of
         Left mkUserCodeError -> throwIO $ mkUserCodeError
         Right userCode -> do
-          writeFile ( userFilePath & toFilePath ) userCode
+          writeFile ( userFilePath & toFilePath ) ( encodeUtf8 userCode )
           pure userFilePath
 
 
@@ -234,11 +238,10 @@ server =
 
       liftIO $ createDirIfMissing False usersDirPath
 
-      let codeMod :: ByteStrC8.ByteString -> Either MkUserCodeError ByteStrC8.ByteString
+      let codeMod :: Text -> Either MkUserCodeError Text
           codeMod templateCode = do
-            -- Trim trailing newline.
-            initStr <- note EmptyTemplate $ initMaybe $ ByteStrC8.unpack templateCode
-            pure $ ByteStrC8.pack $ initStr ++ userCode
+            withoutEndNewline <- note EmptyTemplate $ initMaybe $ Text.unpack templateCode
+            pure $ Text.pack $ withoutEndNewline ++ userCode
 
       let testElm :: Path Rel File -> IO ElmTestResult
           testElm path = do
