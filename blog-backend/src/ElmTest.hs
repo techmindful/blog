@@ -107,7 +107,7 @@ runElmTest :: Path Rel Dir
 runElmTest elmDirRoot elmFilePath = do
 
   ( _, Just hout, Just herr, _ ) <- liftIO $ createProcess
-    ( proc "elm-test" [ elmFilePath & toFilePath, "--report", "json" ] )
+    ( proc "elm-test" [ elmFilePath & toFilePath, "--report", "json", "--fuzz", "1" ] )
     { std_out = CreatePipe
     , std_err = CreatePipe
     , Proc.cwd = Just $ toFilePath elmDirRoot
