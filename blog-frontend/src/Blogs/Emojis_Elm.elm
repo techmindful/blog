@@ -11,7 +11,7 @@ import BackendElmResp
     exposing
         ( ElmTestResp
         , elmTestRespDecoder
-        , elmTestRespToTitle
+        , elmTestRespView
         )
 import Common.Contents
     exposing
@@ -48,6 +48,7 @@ import Element.Input as Input exposing (button)
 import Html
 import Http
 import Markdown
+import String.Extra as String
 
 
 type alias Model =
@@ -114,21 +115,9 @@ update msg model =
 view : Model -> Element Msg
 view model =
     let
-        unicodeToPathRespView : Element msg
-        unicodeToPathRespView =
-            column
-                [ padding 10
-                , width fill
-                , Border.width 2
-                ]
-            <|
-                case model.unicodeToPathResp of
-                    Nothing ->
-                        [ text "Run the code and result will be displayed." ]
-
-                    Just resp ->
-                        [ text <| "Result: " ++ elmTestRespToTitle resp ++ "!"
-                        ]
+        grinEmojiPath : String
+        grinEmojiPath =
+            "/static/noto-emoji/32/emoji_u1f600.png"
     in
     column
         [ blogViewPadding
@@ -202,11 +191,11 @@ type Piece
             , text " is the supposed emoji unicode, excluding colons. For example, "
             , inlineCode "Emoji \"1f600\""
             , text " should be rendered as an emoji image located at "
-            , inlineCode "/static/noto-emoji/32/emoji_u1f600.png"
+            , inlineCode grinEmojiPath
             , text ", which is "
             , image
                 []
-                { src = "/static/noto-emoji/32/emoji_u1f600.png"
+                { src = grinEmojiPath
                 , description = "Emoji of unicode 1f600"
                 }
             , text "."
@@ -221,7 +210,9 @@ unicodeToPath : String -> String
 unicodeToPath unicode =
     """
                 ++ model.unicodeToPathInput
-        , unicodeToPathRespView
+        , elmTestRespView
+            model.unicodeToPathResp
+            (String.quote grinEmojiPath)
         , Input.text
             [ width fill ]
             { onChange = OnUserInputUnicodeToPath

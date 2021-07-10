@@ -5,6 +5,7 @@ module Common.Contents exposing
     , codeBlock__
     , inlineCode
     , plainPara
+    , sizedText
     , underlinedLink
     , underlinedLink_
     , underlinedNewTabLink
@@ -33,6 +34,13 @@ import Element.Input as Input exposing (button)
 import Html
 import Html.Attributes as HtmlAttr
 import String.Extra as String
+
+
+sizedText : Int -> String -> Element msg
+sizedText fontSize str =
+    el
+        [ Font.size fontSize ]
+        (text str)
 
 
 plainPara : String -> Element msg
