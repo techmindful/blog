@@ -16,7 +16,7 @@
 module App where
 
 import           ElmTest
-  ( ElmTestResult
+  ( ElmTestResp
   , runElmTest
   )
 
@@ -63,7 +63,7 @@ type AppState = ()
 
 
 type API = "blog-apis" :> "emojis-in-elm" :> "unicode-to-path"
-                       :> ReqBody '[PlainText] String :> Put '[Servant.JSON] ElmTestResult
+                       :> ReqBody '[PlainText] String :> Put '[Servant.JSON] ElmTestResp
 
 
 type AppM = ReaderT AppState Handler
@@ -187,7 +187,7 @@ server =
 
   where
 
-    unicodeToPathHandler :: String -> AppM ElmTestResult
+    unicodeToPathHandler :: String -> AppM ElmTestResp
     unicodeToPathHandler userCode = do
 
       let elmDirRoot = $(Path.mkRelDir "blog-apis/emojis-in-elm/")

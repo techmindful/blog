@@ -3,12 +3,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module ElmTest
-  ( ElmTestResult
+  ( ElmTestResp
   , runElmTest
   ) where
 
 import           RIO
-import           Prelude ( putStrLn )
 
 import           Data.Aeson as Aeson
   ( FromJSON(..)
@@ -18,6 +17,7 @@ import           Data.Aeson as Aeson
   , (.=)
   , decodeStrict
   , object
+  , toJSONList
   , withObject
   )
 import qualified Data.ByteString.Char8 as ByteStrC8
@@ -34,26 +34,39 @@ import           System.Process ( CreateProcess(..), StdStream( CreatePipe ), cr
 import qualified System.Process as Proc
 
 
-data ElmTestResult
+data ElmTestResp
   = CompileFailure Text
-  | TestFailure ElmTestExpected ElmTestActual
-  | Pass
+  | GotResults [ ElmTestResult ]
   | InternalJsonError
+  deriving ( Generic, Show )
+instance ToJSON ElmTestResp where
+  toJSON resp =
+    case resp of
+      CompileFailure compilerMsg ->
+        object [ "compilerError" .= compilerMsg ]
+
+      GotResults results ->
+        toJSONList results
+
+      InternalJsonError ->
+        Null
+
+
+data ElmTestResult
+  = Fail ElmTestExpected ElmTestActual
+  | Pass
   deriving ( Generic, Show )
 instance ToJSON ElmTestResult where
   toJSON result =
     case result of
-      CompileFailure compilerMsg ->
-        object [ "compilerError" .= compilerMsg ]
-
-      TestFailure _ actual_ ->
-        object [ "pass" .= False, "actual" .= ( actual_ & getElmTestActual ) ]
+      Fail expected_ actual_ ->
+        object [ "pass" .= False
+               , "expected" .= ( expected_ & getElmTestExpected )
+               , "actual"   .= ( actual_   & getElmTestActual   )
+               ]
 
       Pass ->
         object [ "pass" .= True ]
-
-      InternalJsonError ->
-        Null
 
 
 newtype ElmTestExpected = ElmTestExpected
@@ -103,7 +116,7 @@ instance FromJSON ElmTestJson_Failure_Reason_Data
 --   on elm file at `elmFilePath`.
 runElmTest :: Path Rel Dir
            -> Path Rel File
-           -> IO ElmTestResult
+           -> IO ElmTestResp
 runElmTest elmDirRoot elmFilePath = do
 
   ( _, Just hout, Just herr, _ ) <- liftIO $ createProcess
@@ -128,37 +141,32 @@ runElmTest elmDirRoot elmFilePath = do
          decodedJsons = mapMaybe Aeson.decodeStrict $ ByteStrC8.lines out
 
     case decodedJsons of
-      -- Single result:
-      elmTestJson : [] ->
-
-        -- Test fails.
-        if ( elmTestJson & status ) == "fail" then do
-
-          let maybeResult :: Maybe ( ElmTestExpected, ElmTestActual )
-              maybeResult = do
-
-                failure <- headMaybe $ elmTestJson & failures
-
-                -- TODO: Use lenses.
-                let data__ = failure & reason & data_
-
-                pure
-                  ( ElmTestExpected $ data__ & expected
-                  , ElmTestActual   $ data__ & actual
-                  )
-
-          case maybeResult of
-            Nothing -> pure InternalJsonError
-            Just ( expected_, actual_ ) ->
-              pure $ TestFailure expected_ actual_
-
-        -- Test passes.
-        else
-          pure Pass
-                
       [] ->
         pure InternalJsonError
 
-      _ : _ -> do
-        putStrLn "Multiple test runs?"
-        pure InternalJsonError
+      elmTestJsons -> do
+        
+        let maybeResults = map elmTestJsonToResult elmTestJsons
+
+        if any isNothing maybeResults then
+          pure InternalJsonError
+        else
+          pure $ GotResults $ catMaybes maybeResults
+
+ 
+elmTestJsonToResult :: ElmTestJson -> Maybe ElmTestResult
+elmTestJsonToResult elmTestJson =
+  
+  if ( elmTestJson & status ) == "fail" then do
+
+    failure <- headMaybe $ elmTestJson & failures
+
+    -- TODO: Use lenses.
+    let data__ = failure & reason & data_
+
+    pure $ Fail ( ElmTestExpected $ data__ & expected )
+                ( ElmTestActual   $ data__ & actual   )
+
+  else
+    pure Pass
+

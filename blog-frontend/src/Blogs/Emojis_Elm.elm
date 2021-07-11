@@ -116,9 +116,14 @@ update msg model =
 view : Model -> Element Msg
 view model =
     let
-        grinEmojiPath : String
         grinEmojiPath =
             "/static/noto-emoji/32/emoji_u1f600.png"
+
+        robotEmojiPath =
+            "/static/noto-emoji/32/emoji_u1f916.png"
+
+        heartEmojiPath =
+            "/static/noto-emoji/32/emoji_u2764.png"
     in
     column
         [ width fill
@@ -220,7 +225,10 @@ unicodeToPath unicode =
                     ++ model.unicodeToPathInput
         , elmTestRespView
             model.unicodeToPathResp
-            (String.quote grinEmojiPath)
+            [ String.quote grinEmojiPath
+            , String.quote robotEmojiPath
+            , String.quote heartEmojiPath
+            ]
         , Input.text
             [ width fill ]
             { onChange = OnUserInputUnicodeToPath
