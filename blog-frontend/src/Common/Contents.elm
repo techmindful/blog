@@ -1,9 +1,11 @@
 module Common.Contents exposing
-    ( borderedButton
+    ( boldText
+    , borderedButton
     , codeBlock
     , codeBlock_
     , codeBlock__
     , inlineCode
+    , italicText
     , plainImage
     , plainPara
     , sizedText
@@ -11,6 +13,7 @@ module Common.Contents exposing
     , underlinedLink_
     , underlinedNewTabLink
     , underlinedNewTabLink_
+    , underlinedText
     , wordBreakPara
     )
 
@@ -43,8 +46,25 @@ import String.Extra as String
 
 sizedText : Int -> String -> Element msg
 sizedText fontSize str =
+    el [ Font.size fontSize ] (text str)
+
+
+boldText : String -> Element msg
+boldText str =
+    el [ Font.bold ] (text str)
+
+
+italicText : String -> Element msg
+italicText str =
     el
-        [ Font.size fontSize ]
+        [ Font.italic ]
+        (text str)
+
+
+underlinedText : String -> Element msg
+underlinedText str =
+    el
+        [ Font.underline ]
         (text str)
 
 

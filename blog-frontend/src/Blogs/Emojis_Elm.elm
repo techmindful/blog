@@ -15,13 +15,16 @@ import BackendElmResp
         , elmTestRespDecoder
         , elmTestResultsView
         )
+import Common.Colors exposing (codeGray)
 import Common.Contents
     exposing
-        ( borderedButton
+        ( boldText
+        , borderedButton
         , codeBlock
         , codeBlock_
         , codeBlock__
         , inlineCode
+        , italicText
         , plainImage
         , plainPara
         , underlinedNewTabLink
@@ -53,6 +56,7 @@ import Element
         , text
         , width
         )
+import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input exposing (button)
@@ -244,9 +248,11 @@ unicodeToPath unicode =
             , text ", let's parse the string input by user into a list of "
             , inlineCode "Piece"
             , text "s. For example, if user entered a string "
-            , inlineCode "\"Hello :1f600:, nice to meet you. I :2764: coding :1f916:\""
-            , text ", it should be parsed into:"
             ]
+        , paragraph
+            (squareBorder 10 ++ [ Background.color codeGray ])
+            [ text "\"Hello :1f600:, nice to meet you. I :2764: coding :1f916:\"" ]
+        , plainPara "It should be parsed into:"
         , codeBlock__ False
             """
 [ Text "Hello "
@@ -275,6 +281,40 @@ unicodeToPath unicode =
             , plainImage heartEmojiPath "heart emoji"
             , text " coding "
             , plainImage robotEmojiPath "robot emoji"
+            ]
+        , paragraph
+            []
+            [ text "The first method I tried was using "
+            , inlineCode "elm/parser"
+            , text
+                """. However, after the parser I wrote made the page freeze with what looks like an infinite loop, and the compiler couldn't be there for me, I gave up and switched to try """
+            , inlineCode "elm/regex"
+            , text ". It almost worked. With the regex "
+            , inlineCode ":[^:]+:"
+            , text ", I could find and replace "
+            , italicText "every other pair"
+            , text " of colons and the content in-between. However, it can't handle strings like: "
+            ]
+        , paragraph
+            (squareBorder 10 ++ [ Background.color codeGray ])
+            [ text "\"Alice said: Hello :1f600:, nice to meet you.\"" ]
+        , paragraph
+            []
+            [ text "In this case, the first pair of colons is "
+            , inlineCode ": Hello :"
+            , text ". My code would end up trying to replace "
+            , inlineCode ": Hello :"
+            , text " with an emoji image whose unicode is "
+            , inlineCode " Hello "
+            , text ", and fail to match the colon pair "
+            , inlineCode ":1f600:"
+            , text " that is actually intended as an emoji, "
+            , text
+                """
+                So I had to write my own algorithm to match only colon pairs that contains a 
+                """
+            , italicText "valid"
+            , text " emoji unicode in-between."
             ]
         ]
 
