@@ -4,6 +4,7 @@ module Common.Contents exposing
     , codeBlock_
     , codeBlock__
     , inlineCode
+    , plainImage
     , plainPara
     , sizedText
     , underlinedLink
@@ -20,6 +21,7 @@ import Element
         , column
         , el
         , fill
+        , image
         , link
         , newTabLink
         , padding
@@ -141,3 +143,12 @@ codeBlock_ widthFill =
 -}
 codeBlock__ widthFill =
     mkCodeBlock widthFill << String.trim
+
+
+plainImage : String -> String -> Element msg
+plainImage src description =
+    image
+        []
+        { src = src
+        , description = description
+        }

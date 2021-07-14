@@ -1,9 +1,12 @@
 module BackendElmResp exposing
     ( ElmTestResp(..)
+    , ElmTestResult(..)
     , elmTestCompilerErrorView
     , elmTestRespDecoder
     , elmTestRespView
     , elmTestResultsView
+    , internalServerErrorView
+    , noRespView_
     )
 
 import Common.Contents
@@ -146,27 +149,20 @@ elmTestCompilerErrorView compilerErrorStr =
         ]
 
 
-elmTestResultsView : List ElmTestResult -> List String -> Element msg
-elmTestResultsView results allExpected =
+elmTestResultsView :
+    List ElmTestResult
+    -> List String
+    -> (Failure -> Element msg)
+    -> (String -> Element msg)
+    -> Element msg
+elmTestResultsView results allExpected failedCaseView passedCaseView =
     let
-        failedCaseView : Failure -> Element msg
-        failedCaseView failure =
-            column
-                [ spacing 10 ]
-                [ plainPara <| "Expected: " ++ failure.expected
-                , plainPara <| "Actual: " ++ failure.actual
-                ]
-
         failedCasesView =
             column
                 [ spacing 20 ]
             <|
                 List.map failedCaseView <|
                     getFailedCases results
-
-        passedCaseView : String -> Element msg
-        passedCaseView expected =
-            plainPara <| "Passed: " ++ expected
 
         passedCasesView =
             column
@@ -193,11 +189,43 @@ elmTestResultsView results allExpected =
         ]
 
 
+{-| A default view for elm-test results
+-}
+elmTestResultsView_ : List ElmTestResult -> List String -> Element msg
+elmTestResultsView_ results allExpected =
+    elmTestResultsView results allExpected failedCaseView_ passedCaseView_
+
+
+{-| A default view for elm-test failed case.
+-}
+failedCaseView_ : Failure -> Element msg
+failedCaseView_ failure =
+    column
+        [ spacing 10 ]
+        [ plainPara <| "Expected: " ++ failure.expected
+        , plainPara <| "Actual: " ++ failure.actual
+        ]
+
+
+{-| A default view for elm-test passed case.
+-}
+passedCaseView_ : String -> Element msg
+passedCaseView_ expected =
+    plainPara <| "Passed: " ++ expected
+
+
 internalServerErrorView : Element msg
 internalServerErrorView =
     text "Error: Server encountered an error."
 
 
+noRespView_ : Element msg
+noRespView_ =
+    text "Run the code and result will be displayed."
+
+
+{-| A default view for ElmTestResp.
+-}
 elmTestRespView : Maybe ElmTestResp -> List String -> Element msg
 elmTestRespView maybeResp allExpected =
     el
@@ -208,7 +236,7 @@ elmTestRespView maybeResp allExpected =
     <|
         case maybeResp of
             Nothing ->
-                text "Run the code and result will be displayed."
+                noRespView_
 
             Just resp ->
                 case resp of
@@ -216,7 +244,7 @@ elmTestRespView maybeResp allExpected =
                         elmTestCompilerErrorView compilerErrorStr
 
                     Results results ->
-                        elmTestResultsView results allExpected
+                        elmTestResultsView_ results allExpected
 
                     InternalServerError ->
                         internalServerErrorView

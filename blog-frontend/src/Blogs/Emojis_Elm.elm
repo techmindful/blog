@@ -9,9 +9,11 @@ module Blogs.Emojis_Elm exposing
 
 import BackendElmResp
     exposing
-        ( ElmTestResp
+        ( ElmTestResp(..)
+        , ElmTestResult(..)
+        , elmTestCompilerErrorView
         , elmTestRespDecoder
-        , elmTestRespView
+        , elmTestResultsView
         )
 import Common.Contents
     exposing
@@ -20,6 +22,7 @@ import Common.Contents
         , codeBlock_
         , codeBlock__
         , inlineCode
+        , plainImage
         , plainPara
         , underlinedNewTabLink
         , underlinedNewTabLink_
@@ -27,6 +30,7 @@ import Common.Contents
 import Common.Styles
     exposing
         ( blogViewPadding
+        , edges
         , paraSpacing
         )
 import Element
@@ -37,8 +41,11 @@ import Element
         , fill
         , image
         , padding
+        , paddingEach
         , paddingXY
         , paragraph
+        , row
+        , spacing
         , spacingXY
         , text
         , width
@@ -115,16 +122,6 @@ update msg model =
 
 view : Model -> Element Msg
 view model =
-    let
-        grinEmojiPath =
-            "/static/noto-emoji/32/emoji_u1f600.png"
-
-        robotEmojiPath =
-            "/static/noto-emoji/32/emoji_u1f916.png"
-
-        heartEmojiPath =
-            "/static/noto-emoji/32/emoji_u2764.png"
-    in
     column
         [ width fill
         , blogViewPadding
@@ -223,12 +220,12 @@ unicodeToPath : String -> String
 unicodeToPath unicode =
     """
                     ++ model.unicodeToPathInput
-        , elmTestRespView
-            model.unicodeToPathResp
-            [ String.quote grinEmojiPath
-            , String.quote robotEmojiPath
-            , String.quote heartEmojiPath
+        , el
+            [ Border.width 2
+            , padding 10
+            , width fill
             ]
+            (unicodeToPathRespView model.unicodeToPathResp)
         , Input.text
             [ width fill ]
             { onChange = OnUserInputUnicodeToPath
@@ -238,3 +235,74 @@ unicodeToPath unicode =
             }
         , borderedButton OnUserRunUnicodeToPath "Compile and Run!"
         ]
+
+
+unicodeToPathRespView : Maybe ElmTestResp -> Element msg
+unicodeToPathRespView maybeResp =
+    case maybeResp of
+        Nothing ->
+            BackendElmResp.noRespView_
+
+        Just resp ->
+            case resp of
+                CompilerError_ errorMsg ->
+                    elmTestCompilerErrorView errorMsg
+
+                Results results ->
+                    let
+                        mkEmoji : String -> Element msg
+                        mkEmoji src =
+                            el
+                                [ paddingEach { edges | left = 20 } ]
+                            <|
+                                image
+                                    [ Border.widthEach { edges | left = 2 }
+                                    , paddingEach { edges | left = 10 }
+                                    ]
+                                    { src = src
+                                    , description = ""
+                                    }
+                    in
+                    elmTestResultsView
+                        results
+                        [ String.quote grinEmojiPath
+                        , String.quote robotEmojiPath
+                        , String.quote heartEmojiPath
+                        ]
+                        (\failure ->
+                            column
+                                [ spacing 10 ]
+                                [ row
+                                    []
+                                    [ text <| "Expected: " ++ failure.expected
+                                    , mkEmoji <| String.unquote failure.expected
+                                    ]
+                                , row
+                                    []
+                                    [ text <| "Actual: " ++ failure.actual
+                                    , mkEmoji <| String.unquote failure.actual
+                                    ]
+                                ]
+                        )
+                        (\expected ->
+                            row
+                                []
+                                [ text <| "Passed: " ++ expected
+                                , mkEmoji <| String.unquote expected
+                                ]
+                        )
+
+                InternalServerError ->
+                    BackendElmResp.internalServerErrorView
+
+
+grinEmojiPath =
+    "/static/noto-emoji/32/emoji_u1f600.png"
+
+
+robotEmojiPath =
+    "/static/noto-emoji/32/emoji_u1f916.png"
+
+
+heartEmojiPath =
+    "/static/noto-emoji/32/emoji_u2764.png"
