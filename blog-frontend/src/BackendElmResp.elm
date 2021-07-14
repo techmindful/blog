@@ -1,7 +1,9 @@
 module BackendElmResp exposing
     ( ElmTestResp(..)
+    , elmTestCompilerErrorView
     , elmTestRespDecoder
     , elmTestRespView
+    , elmTestResultsView
     )
 
 import Common.Contents
@@ -101,18 +103,103 @@ elmTestRespDecoder =
         ]
 
 
+title : String -> Element msg
+title str =
+    el
+        [ Border.widthEach { bottom = 2, top = 0, left = 0, right = 0 }
+        , paddingEach { bottom = 5, top = 0, left = 0, right = 0 }
+        , width fill
+        ]
+        (sizedText 24 str)
+
+
+elmTestCompilerErrorView : String -> Element msg
+elmTestCompilerErrorView compilerErrorStr =
+    column
+        [ width fill
+        , spacing 15
+        ]
+        [ title "Compiler Error"
+        , case Parser.run compilerErrorParser compilerErrorStr of
+            Err _ ->
+                plainPara "Error: Can't parse compiler error."
+
+            Ok compilerError ->
+                column
+                    [ spacing 20 ]
+                    [ text compilerError.errorType
+                    , column
+                        [ width fill
+                        , spacing 10
+                        ]
+                      <|
+                        List.map
+                            (\str ->
+                                paragraph
+                                    [ Element.htmlAttribute <|
+                                        HtmlAttr.style "white-space" "pre-wrap"
+                                    ]
+                                    [ text str ]
+                            )
+                            (String.split "\n" compilerError.errorMsg)
+                    ]
+        ]
+
+
+elmTestResultsView : List ElmTestResult -> List String -> Element msg
+elmTestResultsView results allExpected =
+    let
+        failedCaseView : Failure -> Element msg
+        failedCaseView failure =
+            column
+                [ spacing 10 ]
+                [ plainPara <| "Expected: " ++ failure.expected
+                , plainPara <| "Actual: " ++ failure.actual
+                ]
+
+        failedCasesView =
+            column
+                [ spacing 20 ]
+            <|
+                List.map failedCaseView <|
+                    getFailedCases results
+
+        passedCaseView : String -> Element msg
+        passedCaseView expected =
+            plainPara <| "Passed: " ++ expected
+
+        passedCasesView =
+            column
+                [ spacing 10 ]
+            <|
+                List.map passedCaseView <|
+                    getPassedCases results allExpected
+    in
+    column
+        [ width fill ]
+        [ title <|
+            if areAllResultsPassed results then
+                "Test Passed"
+
+            else
+                "Test Failed"
+        , column
+            [ paddingEach { top = 15, bottom = 0, left = 0, right = 0 }
+            , spacing 20
+            ]
+            [ failedCasesView
+            , passedCasesView
+            ]
+        ]
+
+
+internalServerErrorView : Element msg
+internalServerErrorView =
+    text "Error: Server encountered an error."
+
+
 elmTestRespView : Maybe ElmTestResp -> List String -> Element msg
 elmTestRespView maybeResp allExpected =
-    let
-        title : String -> Element msg
-        title str =
-            el
-                [ Border.widthEach { bottom = 2, top = 0, left = 0, right = 0 }
-                , paddingEach { bottom = 5, top = 0, left = 0, right = 0 }
-                , width fill
-                ]
-                (sizedText 24 str)
-    in
     el
         [ padding 10
         , width fill
@@ -126,83 +213,13 @@ elmTestRespView maybeResp allExpected =
             Just resp ->
                 case resp of
                     CompilerError_ compilerErrorStr ->
-                        column
-                            [ width fill
-                            , spacing 15
-                            ]
-                            [ title "Compiler Error"
-                            , case Parser.run compilerErrorParser compilerErrorStr of
-                                Err _ ->
-                                    plainPara "Error: Can't parse compiler error."
-
-                                Ok compilerError ->
-                                    column
-                                        [ spacing 20 ]
-                                        [ text compilerError.errorType
-                                        , column
-                                            [ width fill
-                                            , spacing 10
-                                            ]
-                                          <|
-                                            List.map
-                                                (\str ->
-                                                    paragraph
-                                                        [ Element.htmlAttribute <|
-                                                            HtmlAttr.style "white-space" "pre-wrap"
-                                                        ]
-                                                        [ text str ]
-                                                )
-                                                (String.split "\n" compilerError.errorMsg)
-                                        ]
-                            ]
+                        elmTestCompilerErrorView compilerErrorStr
 
                     Results results ->
-                        let
-                            failedCaseView : Failure -> Element msg
-                            failedCaseView failure =
-                                column
-                                    [ spacing 10 ]
-                                    [ plainPara <| "Expected: " ++ failure.expected
-                                    , plainPara <| "Actual: " ++ failure.actual
-                                    ]
-
-                            failedCasesView =
-                                column
-                                    [ spacing 20 ]
-                                <|
-                                    List.map failedCaseView <|
-                                        getFailedCases results
-
-                            passedCaseView : String -> Element msg
-                            passedCaseView expected =
-                                plainPara <| "Passed: " ++ expected
-
-                            passedCasesView =
-                                column
-                                    [ spacing 10 ]
-                                <|
-                                    List.map passedCaseView <|
-                                        getPassedCases results allExpected
-                        in
-                        column
-                            [ width fill ]
-                            [ title <|
-                                if areAllResultsPassed results then
-                                    "Test Passed"
-
-                                else
-                                    "Test Failed"
-                            , column
-                                [ paddingEach { top = 15, bottom = 0, left = 0, right = 0 }
-                                , spacing 20
-                                ]
-                                [ failedCasesView
-                                , passedCasesView
-                                ]
-                            ]
+                        elmTestResultsView results allExpected
 
                     InternalServerError ->
-                        text "Error: Server encountered an error."
+                        internalServerErrorView
 
 
 compilerErrorParser : Parser CompilerError
