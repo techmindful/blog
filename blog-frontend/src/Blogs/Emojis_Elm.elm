@@ -26,6 +26,7 @@ import Common.Contents
         , plainPara
         , underlinedNewTabLink
         , underlinedNewTabLink_
+        , wordBreakPara
         )
 import Common.Styles
     exposing
@@ -274,12 +275,12 @@ unicodeToPathRespView maybeResp =
                                 [ spacing 10 ]
                                 [ row
                                     []
-                                    [ text <| "Expected: " ++ failure.expected
+                                    [ plainPara <| "Expected: " ++ failure.expected
                                     , mkEmoji <| String.unquote failure.expected
                                     ]
                                 , row
-                                    []
-                                    [ text <| "Actual: " ++ failure.actual
+                                    [ width fill ]
+                                    [ wordBreakPara <| "Actual: " ++ failure.actual
                                     , mkEmoji <| String.unquote failure.actual
                                     ]
                                 ]
@@ -287,7 +288,7 @@ unicodeToPathRespView maybeResp =
                         (\expected ->
                             row
                                 []
-                                [ text <| "Passed: " ++ expected
+                                [ plainPara <| "Passed: " ++ expected
                                 , mkEmoji <| String.unquote expected
                                 ]
                         )

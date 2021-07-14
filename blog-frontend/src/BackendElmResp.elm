@@ -141,6 +141,8 @@ elmTestCompilerErrorView compilerErrorStr =
                                 paragraph
                                     [ Element.htmlAttribute <|
                                         HtmlAttr.style "white-space" "pre-wrap"
+                                    , Element.htmlAttribute <|
+                                        HtmlAttr.style "overflow-wrap" "anywhere"
                                     ]
                                     [ text str ]
                             )

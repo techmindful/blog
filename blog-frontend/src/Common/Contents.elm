@@ -11,6 +11,7 @@ module Common.Contents exposing
     , underlinedLink_
     , underlinedNewTabLink
     , underlinedNewTabLink_
+    , wordBreakPara
     )
 
 import Common.Colors exposing (..)
@@ -50,6 +51,13 @@ sizedText fontSize str =
 plainPara : String -> Element msg
 plainPara str =
     paragraph [] [ text str ]
+
+
+wordBreakPara : String -> Element msg
+wordBreakPara str =
+    paragraph
+        [ Element.htmlAttribute <| style "overflow-wrap" "anywhere" ]
+        [ text str ]
 
 
 underlinedLink : String -> String -> Element msg
