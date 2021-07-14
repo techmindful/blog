@@ -161,14 +161,18 @@ elmTestResultsView results allExpected failedCaseView passedCaseView =
     let
         failedCasesView =
             column
-                [ spacing 20 ]
+                [ spacing 20
+                , width fill
+                ]
             <|
                 List.map failedCaseView <|
                     getFailedCases results
 
         passedCasesView =
             column
-                [ spacing 10 ]
+                [ spacing 10
+                , width fill
+                ]
             <|
                 List.map passedCaseView <|
                     getPassedCases results allExpected
@@ -184,6 +188,7 @@ elmTestResultsView results allExpected failedCaseView passedCaseView =
         , column
             [ paddingEach { top = 15, bottom = 0, left = 0, right = 0 }
             , spacing 20
+            , width fill
             ]
             [ failedCasesView
             , passedCasesView

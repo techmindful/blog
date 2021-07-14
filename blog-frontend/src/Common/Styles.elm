@@ -32,5 +32,12 @@ roundedBorder =
     ]
 
 
+squareBorder : Int -> List (Element.Attribute msg)
+squareBorder paddingPx =
+    [ Border.width 2
+    , padding paddingPx
+    ]
+
+
 edges =
     { top = 0, bottom = 0, left = 0, right = 0 }

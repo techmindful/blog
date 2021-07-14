@@ -33,10 +33,12 @@ import Common.Styles
         ( blogViewPadding
         , edges
         , paraSpacing
+        , squareBorder
         )
 import Element
     exposing
         ( Element
+        , alignRight
         , column
         , el
         , fill
@@ -235,6 +237,45 @@ unicodeToPath unicode =
             , label = Input.labelHidden ""
             }
         , borderedButton OnUserRunUnicodeToPath "Compile and Run!"
+        , paragraph
+            []
+            [ text "Now that we can find the image based on the unicode the user has entered like "
+            , inlineCode ":1f600:"
+            , text ", let's parse the string input by user into a list of "
+            , inlineCode "Piece"
+            , text "s. For example, if user entered a string "
+            , inlineCode "\"Hello :1f600:, nice to meet you. I :2764: coding :1f916:\""
+            , text ", it should be parsed into:"
+            ]
+        , codeBlock__ False
+            """
+[ Text "Hello "
+, Emoji "1f600"
+, Text ", nice to meet you. I "
+, Emoji "2764"
+, Text " coding "
+, Emoji "1f916"
+]
+            """
+        , paragraph
+            []
+            [ text "Each "
+            , inlineCode "Piece"
+            , text " is then rendered based on if it's a "
+            , inlineCode "Text"
+            , text " or "
+            , inlineCode "Emoji"
+            , text ". The rendered products will be put together in a row, resulting in something like: "
+            ]
+        , row
+            (squareBorder 10)
+            [ text "Hello "
+            , plainImage grinEmojiPath "grin emoji"
+            , text ", nice to meet you. I "
+            , plainImage heartEmojiPath "heart emoji"
+            , text " coding "
+            , plainImage robotEmojiPath "robot emoji"
+            ]
         ]
 
 
@@ -254,7 +295,9 @@ unicodeToPathRespView maybeResp =
                         mkEmoji : String -> Element msg
                         mkEmoji src =
                             el
-                                [ paddingEach { edges | left = 20 } ]
+                                [ alignRight
+                                , paddingEach { edges | right = 20 }
+                                ]
                             <|
                                 image
                                     [ Border.widthEach { edges | left = 2 }
@@ -272,9 +315,11 @@ unicodeToPathRespView maybeResp =
                         ]
                         (\failure ->
                             column
-                                [ spacing 10 ]
+                                [ width fill
+                                , spacing 10
+                                ]
                                 [ row
-                                    []
+                                    [ width fill ]
                                     [ plainPara <| "Expected: " ++ failure.expected
                                     , mkEmoji <| String.unquote failure.expected
                                     ]
@@ -287,7 +332,7 @@ unicodeToPathRespView maybeResp =
                         )
                         (\expected ->
                             row
-                                []
+                                [ width fill ]
                                 [ plainPara <| "Passed: " ++ expected
                                 , mkEmoji <| String.unquote expected
                                 ]
