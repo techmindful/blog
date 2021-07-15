@@ -316,6 +316,31 @@ unicodeToPath unicode =
             , italicText "valid"
             , text " emoji unicode in-between."
             ]
+        , paragraph
+            []
+            [ text
+                """
+                Turns out it isn't hard to write a recursive algorithm for this. The function first tries to locate a pair of colons in the input string. If it can't find at least 2 colons, that means there definitely isn't any emoji in the string, and it should just be parsed as 
+                """
+            , inlineCode "Text"
+            , text
+                """. If it finds two colons, it slices out the substring in-between, and checks if it's an emoji unicode. If it is not, then everything before the second colon should be parsed as 
+                """
+            , inlineCode "Text"
+            , text
+                """. Be careful not to include the second colon here. It could be a part of a following emoji! And if the substring between colon is an emoji unicode, then everything before the 
+                """
+            , italicText "first"
+            , text " colon should be parsed as "
+            , inlineCode "Text"
+            , text ", the unicode and the surrounding colons should be parsed as "
+            , inlineCode "Emoji"
+            , text ". In both cases, the rest of the string will be parsed into a list of "
+            , inlineCode "Piece"
+            , text
+                """s by a recursive call to the function itself. The result is the whole thing concatenated.
+                """
+            ]
         ]
 
 
@@ -357,6 +382,7 @@ unicodeToPathRespView maybeResp =
                             column
                                 [ width fill
                                 , spacing 10
+                                , Element.explain Debug.todo
                                 ]
                                 [ row
                                     [ width fill ]
