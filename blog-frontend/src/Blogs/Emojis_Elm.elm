@@ -38,6 +38,7 @@ import Common.Styles
         , paraSpacing
         , squareBorder
         )
+import Common.Urls exposing (blogApisRoot)
 import Element
     exposing
         ( Element
@@ -64,6 +65,8 @@ import Html
 import Http
 import Markdown
 import String.Extra as String
+import Url.Builder
+import Utils.Networking exposing (plainPutReq, utf8StringBody)
 
 
 type alias Model =
@@ -107,15 +110,10 @@ update msg model =
 
         OnUserRunUnicodeToPath ->
             ( model
-            , Http.request
-                { method = "PUT"
-                , headers = []
-                , url = "/blog-apis/emojis-in-elm/unicode-to-path/"
-                , body = Http.stringBody "text/plain;charset=utf-8" model.unicodeToPathInput
-                , expect = Http.expectJson GotRunUnicodeToPathResp elmTestRespDecoder
-                , timeout = Nothing
-                , tracker = Nothing
-                }
+            , plainPutReq
+                (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "unicode-to-path" ] [])
+                (utf8StringBody model.unicodeToPathInput)
+                (Http.expectJson GotRunUnicodeToPathResp elmTestRespDecoder)
             )
 
         GotRunUnicodeToPathResp result ->
@@ -436,7 +434,6 @@ unicodeToPathRespView maybeResp =
                             column
                                 [ width fill
                                 , spacing 10
-                                , Element.explain Debug.todo
                                 ]
                                 [ row
                                     [ width fill ]
