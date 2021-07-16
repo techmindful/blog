@@ -84,6 +84,7 @@ type Msg
     | GotRunUnicodeToPathResp (Result Http.Error ElmTestResp)
     | OnUserInputFirstColonPair String
     | OnUserRunFirstColonPair
+    | GotRunFirstColonPairResp (Result Http.Error ElmTestResp)
 
 
 title =
@@ -134,6 +135,14 @@ update msg model =
             )
 
         OnUserRunFirstColonPair ->
+            ( model
+            , plainPutReq
+                (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "first-colon-pair" ] [])
+                (utf8StringBody model.firstColonPairInput)
+                (Http.expectJson GotRunFirstColonPairResp elmTestRespDecoder)
+            )
+
+        GotRunFirstColonPairResp result ->
             Debug.todo ""
 
 
