@@ -70,6 +70,7 @@ type alias Model =
     { unicodeToPathInput : String
     , unicodeToPathResp : Maybe ElmTestResp
     , isUnicodeToPathSkipped : Bool
+    , firstColonPairInput : String
     , error : Maybe Http.Error
     }
 
@@ -78,6 +79,8 @@ type Msg
     = OnUserInputUnicodeToPath String
     | OnUserRunUnicodeToPath
     | GotRunUnicodeToPathResp (Result Http.Error ElmTestResp)
+    | OnUserInputFirstColonPair String
+    | OnUserRunFirstColonPair
 
 
 title =
@@ -89,6 +92,7 @@ init =
     { unicodeToPathInput = ""
     , unicodeToPathResp = Nothing
     , isUnicodeToPathSkipped = False
+    , firstColonPairInput = ""
     , error = Nothing
     }
 
@@ -125,6 +129,14 @@ update msg model =
                     ( { model | unicodeToPathResp = Just resp }
                     , Cmd.none
                     )
+
+        OnUserInputFirstColonPair str ->
+            ( { model | firstColonPairInput = str }
+            , Cmd.none
+            )
+
+        OnUserRunFirstColonPair ->
+            Debug.todo ""
 
 
 view : Model -> Element Msg
@@ -341,6 +353,48 @@ unicodeToPath unicode =
                 """s by a recursive call to the function itself. The result is the whole thing concatenated.
                 """
             ]
+        , codeBlock__ True <|
+            """
+replaceEmojis : String -> List Piece
+replaceEmojis str =
+    let
+        colonIndices : List Int
+        colonIndices =
+            String.indices ":" str
+
+        firstColonPair : Maybe ( Int, Int )
+        firstColonPair =
+            """
+                ++ model.firstColonPairInput
+                ++ """
+                (List.getAt 0 colonIndices)
+                (List.getAt 1 colonIndices)
+                    """
+        , paragraph
+            []
+            [ inlineCode "colonIndices"
+            , text
+                """ locates the index of each colon character in the string. 
+                """
+            , inlineCode "firstColonPair"
+            , text " uses "
+            , inlineCode "List.getAt"
+            , text " from "
+            , underlinedNewTabLink
+                "https://package.elm-lang.org/packages/elm-community/list-extra/latest/List-Extra#getAt"
+                "elm-community/list-extra"
+            , text
+                """ to attempt to get the indices of first and second colons. Can you complete the first line which will combine the two Maybe indices into a Maybe tuple?
+                """
+            ]
+        , Input.text
+            [ width fill ]
+            { onChange = OnUserInputFirstColonPair
+            , text = model.firstColonPairInput
+            , placeholder = Nothing
+            , label = Input.labelHidden ""
+            }
+        , borderedButton OnUserRunFirstColonPair "Compile and Run!"
         ]
 
 
