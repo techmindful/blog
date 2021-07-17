@@ -26,7 +26,10 @@ source-repository head
 library
   exposed-modules:
       App
+      Blogs.EmojisInElm
       ElmTest
+      Types
+      Utils.Random
   other-modules:
       Paths_blog_backend
   hs-source-dirs:

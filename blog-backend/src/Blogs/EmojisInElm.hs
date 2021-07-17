@@ -13,13 +13,19 @@
 {-# LANGUAGE UndecidableInstances #-} 
 
 
-module App where
+module Blogs.EmojisInElm
+  ( API
+  , server
+  , unicodeToPathHandler
+  )
+  where
 
-import           Types ( AppM, AppState )
-import qualified Blogs.EmojisInElm 
+import           Types ( AppM )
 import           ElmTest
   ( ElmTestResp
+  , MkUserCodeError(..)
   , runElmTest
+  , tryMkUserFile
   )
 
 import           RIO hiding ( Handler )
@@ -42,6 +48,8 @@ import           Network.Wai.Handler.Warp as Warp
 
 import           Control.Arrow ( left )
 import           Control.Error ( note )
+import           Crypto.Random ( seedNew, seedToInteger )
+import           Crypto.Hash ( SHA256(..), hashWith )
 import qualified Data.ByteString.Char8 as ByteStrC8
 --import           Optics ( (^.) )
 import           RIO.ByteString as ByteStr ( readFile, writeFile )
@@ -59,26 +67,39 @@ import qualified Path
 import           Path.IO ( createDirIfMissing ) 
 
 
-type API = Blogs.EmojisInElm.API
+type API = "blog-apis" :> "emojis-in-elm" :> "unicode-to-path"
+                       :> ReqBody '[PlainText] String :> Put '[Servant.JSON] ElmTestResp
 
 
 server :: ServerT API AppM
 server =
 
-  Blogs.EmojisInElm.server
+  unicodeToPathHandler
 
 
-api :: Servant.Proxy API
-api = Servant.Proxy
+unicodeToPathHandler :: String -> AppM ElmTestResp
+unicodeToPathHandler userCode = do
 
+  let elmDirRoot = $(Path.mkRelDir "blog-apis/emojis-in-elm/")
+      templatesDirPath = elmDirRoot </> $(Path.mkRelDir "src-templates/")
+      templateModuleName = $(Path.mkRelFile "UnicodeToPath")
+      usersDirPath = $(Path.mkRelDir "src-users/")
 
-mkApp :: AppState -> Wai.Application
-mkApp appState =
-  serve api $ hoistServer api ( \x -> runReaderT x appState ) server
+  let codeMod :: Text -> Either MkUserCodeError Text
+      codeMod templateCode = do
+        withoutEndNewline <- note EmptyTemplate $ initMaybe $ Text.unpack templateCode
+        pure $ Text.pack $ withoutEndNewline ++ userCode
 
+  userFileName  <-
+    liftIO $ tryMkUserFile
+      templatesDirPath
+      templateModuleName
+      ( elmDirRoot </> usersDirPath )
+      codeMod
 
-runApp :: IO ()
-runApp = do
+  elmTestResult <- liftIO $ runElmTest elmDirRoot $ usersDirPath </> userFileName
 
-  Warp.run 9000 $ mkApp ()
+  liftIO $ putStrLn $ show elmTestResult
+
+  pure elmTestResult
 
