@@ -10,31 +10,12 @@ module ElmTest
   , tryMkUserFile
   ) where
 
-import           Types ( AppM, AppState )
 import           Utils.Random ( getRandomHash )
 
 import           RIO hiding ( Handler )
 import           Prelude ( putStrLn )
 
-import           Servant
-  ( (:>)
-  , Handler
-  , JSON
-  , PlainText
-  , Proxy(..)
-  , Put
-  , ReqBody
-  , ServerT
-  , hoistServer
-  , serve
-  )
-import           Network.Wai as Wai
-import           Network.Wai.Handler.Warp as Warp
-
 import           Control.Arrow ( left )
-import           Control.Error ( note )
-import           Crypto.Random ( seedNew, seedToInteger )
-import           Crypto.Hash ( SHA256(..), hashWith )
 import           Data.Aeson as Aeson
   ( FromJSON(..)
   , Value(..)
@@ -48,7 +29,7 @@ import           Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as ByteStrC8
 --import           Optics ( (^.) )
 import           RIO.ByteString as ByteStr ( hGetContents, null, readFile, writeFile )
-import           RIO.List ( headMaybe, initMaybe )
+import           RIO.List ( headMaybe )
 import qualified RIO.Text as Text
 import           Path
   ( (</>)
