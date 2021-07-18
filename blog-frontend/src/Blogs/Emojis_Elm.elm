@@ -76,6 +76,7 @@ type alias Model =
     , unicodeToPathResp : Maybe ElmTestResp
     , isUnicodeToPathSkipped : Bool
     , firstColonPairInput : String
+    , noColonCaseInput : String
     , renderResult : Result Http.Error String
     , error : Maybe Http.Error
     }
@@ -86,6 +87,7 @@ type Msg
     | OnUserRunUnicodeToPath
     | GotRunUnicodeToPathResp (Result Http.Error ElmTestResp)
     | OnUserInputFirstColonPair String
+    | OnUserInputNoColonCase String
     | OnUserRender
     | GotRenderResp (Result Http.Error String)
 
@@ -100,6 +102,7 @@ init =
     , unicodeToPathResp = Nothing
     , isUnicodeToPathSkipped = False
     , firstColonPairInput = ""
+    , noColonCaseInput = ""
     , renderResult = Ok ""
     , error = Nothing
     }
@@ -134,9 +137,10 @@ update msg model =
                     )
 
         OnUserInputFirstColonPair str ->
-            ( { model | firstColonPairInput = str }
-            , Cmd.none
-            )
+            ( { model | firstColonPairInput = str }, Cmd.none )
+
+        OnUserInputNoColonCase str ->
+            ( { model | noColonCaseInput = str }, Cmd.none )
 
         OnUserRender ->
             ( model
@@ -144,7 +148,7 @@ update msg model =
                 (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "render" ] [])
                 (Http.jsonBody <|
                     JEnc.object
-                        [ ( "noColonCase", JEnc.string "test" ) ]
+                        [ ( "noColonCase", JEnc.string model.noColonCaseInput ) ]
                 )
                 (Http.expectString GotRenderResp)
             )
@@ -400,13 +404,18 @@ replaceEmojis str =
                 "https://package.elm-lang.org/packages/elm-community/list-extra/latest/List-Extra#getAt"
                 "elm-community/list-extra"
             , text
-                """ to attempt to get the indices of first and second colons. Can you complete the first line which will combine the two Maybe indices into a Maybe tuple?
+                """ to attempt to get the indices of first and second colons. Complete the first line which will combine the two Maybe indices into a Maybe tuple!
                 """
+            ]
+        , row
+            []
+            [ text "Maybe."
+            , text "Tuple."
             ]
         , Input.text
             [ width fill ]
-            { onChange = OnUserInputFirstColonPair
-            , text = model.firstColonPairInput
+            { onChange = OnUserInputNoColonCase
+            , text = model.noColonCaseInput
             , placeholder = Nothing
             , label = Input.labelHidden ""
             }
