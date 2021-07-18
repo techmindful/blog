@@ -5,7 +5,7 @@
 
 module ElmTest
   ( ElmTestResp
-  , MkUserCodeError(..)
+  , MkUserFileError(..)
   , runElmTest
   , tryMkUserFile
   ) where
@@ -188,12 +188,12 @@ elmTestJsonToResult elmTestJson =
     pure Pass
 
 
-data MkUserCodeError
+data MkUserFileError
   = EmptyTemplate
   | EmptyModdedCode
   | TemplateUtf8Error 
   deriving ( Generic, Show )
-instance Exception MkUserCodeError
+instance Exception MkUserFileError
 
 
 {-|
@@ -204,19 +204,19 @@ instance Exception MkUserCodeError
   instead of letting function try to split a correct extension out.
 
   Excluding unlikely ones, these exceptions may be thrown:
-  * MkUserCodeError
+  * MkUserFileError
   * File read/write errors.
 -}
 tryMkUserFile :: Path Rel Dir
               -> Path Rel File
               -> Path Rel Dir
-              -> ( Text -> Either MkUserCodeError Text )
+              -> ( Text -> Either MkUserFileError Text )
               -> IO ( Path Rel File )
 tryMkUserFile templateDirPath templateModuleName userDirPath codeMod = do
 
   withException
     mkUserFile
-    ( \ ( e :: MkUserCodeError ) -> do
+    ( \ ( e :: MkUserFileError ) -> do
         putStrLn $ "[ Exception ] "
                 ++ show e
                 ++ " occurred on tryMkUserFile."
@@ -252,7 +252,7 @@ tryMkUserFile templateDirPath templateModuleName userDirPath codeMod = do
       userFileName <- Path.addExtension ext userModuleName
       let userFilePath = userDirPath </> userFileName
 
-      let fixModuleLine :: Text -> Either MkUserCodeError Text
+      let fixModuleLine :: Text -> Either MkUserFileError Text
           fixModuleLine codeText = do 
 
             case Text.lines codeText of
@@ -273,7 +273,7 @@ tryMkUserFile templateDirPath templateModuleName userDirPath codeMod = do
 
       templateCodeByteStr <- readFile $ templateFilePath & toFilePath
 
-      let resultUserCode :: Either MkUserCodeError Text
+      let resultUserCode :: Either MkUserFileError Text
           resultUserCode = do
 
             templateCode <-

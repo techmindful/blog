@@ -17,7 +17,7 @@ module Blogs.EmojisInElm
 import           Types ( AppM )
 import           ElmTest
   ( ElmTestResp
-  , MkUserCodeError(..)
+  , MkUserFileError(..)
   , runElmTest
   , tryMkUserFile
   )
@@ -77,7 +77,7 @@ unicodeToPathHandler userCode = do
       templateModuleName = $(Path.mkRelFile "UnicodeToPath")
       usersDirPath = $(Path.mkRelDir "src-users/")
 
-  let codeMod :: Text -> Either MkUserCodeError Text
+  let codeMod :: Text -> Either MkUserFileError Text
       codeMod templateCode = do
         withoutEndNewline <- note EmptyTemplate $ initMaybe $ Text.unpack templateCode
         pure $ Text.pack $ withoutEndNewline ++ userCode
