@@ -55,6 +55,7 @@ import           System.Process as Proc
   , proc
   , std_err
   , std_out
+  , waitForProcess
   )
 
 
@@ -98,12 +99,14 @@ unicodeToPathHandler userCode = do
 renderHandler :: AppM Text
 renderHandler = liftIO $ do
 
-  ( _, Just _, Just _, _ ) <- createProcess
+  ( _, Just _, Just _, elmMakeProcHandle ) <- createProcess
     ( proc "elm" [ "make", "src-templates/Render.elm", "--optimize", "--output=render.html" ] )
     { std_out = CreatePipe
     , std_err = CreatePipe
     , Proc.cwd = Just "blog-apis/emojis-in-elm/"
     }
+
+  _ <- waitForProcess elmMakeProcHandle
 
   html <- readFile "blog-apis/emojis-in-elm/render.html"
 
