@@ -411,17 +411,20 @@ replaceEmojis str =
             , label = Input.labelHidden ""
             }
         , borderedButton OnUserRender "Compile and Run!"
-        , Element.html <|
-            Html.iframe
-                [ HtmlAttr.srcdoc <|
-                    case model.renderResult of
-                        Err _ ->
-                            "HTTP Error"
+        , el
+            [ width fill ]
+          <|
+            Element.html <|
+                Html.iframe
+                    [ HtmlAttr.srcdoc <|
+                        case model.renderResult of
+                            Err _ ->
+                                "HTTP Error"
 
-                        Ok str ->
-                            str
-                ]
-                []
+                            Ok str ->
+                                str
+                    ]
+                    []
         ]
 
 

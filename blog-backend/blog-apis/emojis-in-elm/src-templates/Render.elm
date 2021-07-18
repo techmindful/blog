@@ -20,8 +20,7 @@ type Piece
 
 unicodeToPath : String -> String
 unicodeToPath unicode =
-    -- No leading / because the html is opened with file://
-    "../../../blog-frontend/static/noto-emoji/32/emoji_u" ++ unicode ++ ".png"
+    "/static/noto-emoji/32/emoji_u" ++ unicode ++ ".png"
 
 
 replaceEmojis : String -> List Piece

@@ -1,16 +1,10 @@
 {-# LANGUAGE DataKinds #-}            
 {-# LANGUAGE DeriveGeneric #-}            
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleInstances #-}    
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}         
-{-# LANGUAGE TypeOperators #-}         
-{-# LANGUAGE UndecidableInstances #-} 
+{-# LANGUAGE TypeOperators #-}
 
 
 module Blogs.EmojisInElm
@@ -44,6 +38,7 @@ import           Servant
 
 import           Control.Error ( note )
 --import           Optics ( (^.) )
+import           RIO.ByteString as ByteStr ( readFile )
 import           RIO.List ( initMaybe )
 import qualified RIO.Text as Text
 import           Path
@@ -53,6 +48,14 @@ import           Path
   , File
   )
 import qualified Path
+import           System.Process as Proc
+  ( CreateProcess(..)
+  , StdStream(..)
+  , createProcess
+  , proc
+  , std_err
+  , std_out
+  )
 
 
 type API = "unicode-to-path" :> ReqBody '[PlainText] String :> Put '[Servant.JSON] ElmTestResp
@@ -93,7 +96,16 @@ unicodeToPathHandler userCode = do
 
 
 renderHandler :: AppM Text
-renderHandler =
+renderHandler = liftIO $ do
 
-  pure "<i>test</i>"
+  ( _, Just _, Just _, _ ) <- createProcess
+    ( proc "elm" [ "make", "src-templates/Render.elm", "--optimize", "--output=render.html" ] )
+    { std_out = CreatePipe
+    , std_err = CreatePipe
+    , Proc.cwd = Just "blog-apis/emojis-in-elm/"
+    }
+
+  html <- readFile "blog-apis/emojis-in-elm/render.html"
+
+  pure $ decodeUtf8With lenientDecode html
 
