@@ -27,7 +27,8 @@ library
   exposed-modules:
       App
       Blogs.EmojisInElm
-      ElmTest
+      Elm.Files
+      Elm.Test
       Types
       Utils.Random
   other-modules:

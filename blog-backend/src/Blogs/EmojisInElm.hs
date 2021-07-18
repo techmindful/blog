@@ -15,7 +15,7 @@ module Blogs.EmojisInElm
   where
 
 import           Types ( AppM )
-import           ElmTest
+import           Elm.Test
   ( ElmTestResp
   , MkUserFileError(..)
   , runElmTest
