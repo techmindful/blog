@@ -23,6 +23,7 @@ import           RIO hiding ( Handler )
 import           Servant
   ( Proxy(..)
   , ServerT
+  , (:>)
   , hoistServer
   , serve
   )
@@ -32,7 +33,7 @@ import           Network.Wai.Handler.Warp as Warp
 --import           Optics ( (^.) )
 
 
-type API = Blogs.EmojisInElm.API
+type API = "blog-apis" :> "emojis-in-elm" :> Blogs.EmojisInElm.API
 
 
 server :: ServerT API AppM

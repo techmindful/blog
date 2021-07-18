@@ -62,6 +62,7 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input exposing (button)
 import Html
+import Html.Attributes as HtmlAttr
 import Http
 import Markdown
 import String.Extra as String
@@ -74,6 +75,7 @@ type alias Model =
     , unicodeToPathResp : Maybe ElmTestResp
     , isUnicodeToPathSkipped : Bool
     , firstColonPairInput : String
+    , renderResult : Result Http.Error String
     , error : Maybe Http.Error
     }
 
@@ -83,8 +85,8 @@ type Msg
     | OnUserRunUnicodeToPath
     | GotRunUnicodeToPathResp (Result Http.Error ElmTestResp)
     | OnUserInputFirstColonPair String
-    | OnUserRunFirstColonPair
-    | GotRunFirstColonPairResp (Result Http.Error ElmTestResp)
+    | OnUserRender
+    | GotRenderResp (Result Http.Error String)
 
 
 title =
@@ -97,6 +99,7 @@ init =
     , unicodeToPathResp = Nothing
     , isUnicodeToPathSkipped = False
     , firstColonPairInput = ""
+    , renderResult = Ok ""
     , error = Nothing
     }
 
@@ -134,16 +137,22 @@ update msg model =
             , Cmd.none
             )
 
-        OnUserRunFirstColonPair ->
+        OnUserRender ->
             ( model
-            , plainPutReq
-                (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "first-colon-pair" ] [])
-                (utf8StringBody model.firstColonPairInput)
-                (Http.expectJson GotRunFirstColonPairResp elmTestRespDecoder)
+            , Http.get
+                { url = Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "render" ] []
+                , expect = Http.expectString GotRenderResp
+                }
+              --, plainPutReq
+              --    (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "render" ] [])
+              --    (utf8StringBody model.firstCol)
+              --    (Http.expectString GotRenderResp)
             )
 
-        GotRunFirstColonPairResp result ->
-            Debug.todo ""
+        GotRenderResp result ->
+            ( { model | renderResult = result }
+            , Cmd.none
+            )
 
 
 view : Model -> Element Msg
@@ -401,7 +410,18 @@ replaceEmojis str =
             , placeholder = Nothing
             , label = Input.labelHidden ""
             }
-        , borderedButton OnUserRunFirstColonPair "Compile and Run!"
+        , borderedButton OnUserRender "Compile and Run!"
+        , Element.html <|
+            Html.iframe
+                [ HtmlAttr.srcdoc <|
+                    case model.renderResult of
+                        Err _ ->
+                            "HTTP Error"
+
+                        Ok str ->
+                            str
+                ]
+                []
         ]
 
 

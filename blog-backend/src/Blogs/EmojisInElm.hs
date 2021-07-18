@@ -33,6 +33,8 @@ import           Prelude ( putStrLn )
 
 import           Servant
   ( (:>)
+  , (:<|>)(..)
+  , Get
   , JSON
   , PlainText
   , Put
@@ -53,14 +55,14 @@ import           Path
 import qualified Path
 
 
-type API = "blog-apis" :> "emojis-in-elm" :> "unicode-to-path"
-                       :> ReqBody '[PlainText] String :> Put '[Servant.JSON] ElmTestResp
+type API = "unicode-to-path" :> ReqBody '[PlainText] String :> Put '[Servant.JSON] ElmTestResp
+      :<|> "render" :> Get '[PlainText] Text
 
 
 server :: ServerT API AppM
 server =
 
-  unicodeToPathHandler
+  unicodeToPathHandler :<|> renderHandler
 
 
 unicodeToPathHandler :: String -> AppM ElmTestResp
@@ -88,4 +90,10 @@ unicodeToPathHandler userCode = do
   liftIO $ putStrLn $ show elmTestResult
 
   pure elmTestResult
+
+
+renderHandler :: AppM Text
+renderHandler =
+
+  pure "<i>test</i>"
 
