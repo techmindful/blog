@@ -15,11 +15,11 @@ module Blogs.EmojisInElm
   where
 
 import           Types ( AppM )
+import           Elm.Files ( tryMkUserFile )
 import           Elm.Test
   ( ElmTestResp
   , MkUserFileError(..)
   , runElmTest
-  , tryMkUserFile
   )
 
 import           RIO hiding ( Handler )
@@ -37,15 +37,18 @@ import           Servant
   )
 
 import           Control.Error ( note )
+import           Data.Text ( breakOn )
 --import           Optics ( (^.) )
 import           RIO.ByteString as ByteStr ( readFile )
 import           RIO.List ( initMaybe )
 import qualified RIO.Text as Text
 import           Path
   ( (</>)
-  , Rel
   , Dir
   , File
+  , Path
+  , Rel
+  , toFilePath
   )
 import qualified Path
 import           System.Process as Proc
@@ -69,13 +72,22 @@ server =
   unicodeToPathHandler :<|> renderHandler
 
 
+elmRoot :: Path Rel Dir
+elmRoot = $(Path.mkRelDir "blog-apis/emojis-in-elm/")
+
+
+templatesDirPath :: Path Rel Dir
+templatesDirPath = elmRoot </> $(Path.mkRelDir "src-templates/")
+
+
+elmUsersDirPath :: Path Rel Dir
+elmUsersDirPath = $(Path.mkRelDir "src-users/")
+
+
 unicodeToPathHandler :: String -> AppM ElmTestResp
 unicodeToPathHandler userCode = do
 
-  let elmDirRoot = $(Path.mkRelDir "blog-apis/emojis-in-elm/")
-      templatesDirPath = elmDirRoot </> $(Path.mkRelDir "src-templates/")
-      templateModuleName = $(Path.mkRelFile "UnicodeToPath")
-      usersDirPath = $(Path.mkRelDir "src-users/")
+  let templateModuleName = $(Path.mkRelFile "UnicodeToPath")
 
   let codeMod :: Text -> Either MkUserFileError Text
       codeMod templateCode = do
@@ -86,10 +98,10 @@ unicodeToPathHandler userCode = do
     liftIO $ tryMkUserFile
       templatesDirPath
       templateModuleName
-      ( elmDirRoot </> usersDirPath )
+      ( elmRoot </> elmUsersDirPath )
       codeMod
 
-  elmTestResult <- liftIO $ runElmTest elmDirRoot $ usersDirPath </> userFileName
+  elmTestResult <- liftIO $ runElmTest elmRoot $ elmUsersDirPath </> userFileName
 
   liftIO $ putStrLn $ show elmTestResult
 
@@ -99,16 +111,44 @@ unicodeToPathHandler userCode = do
 renderHandler :: AppM Text
 renderHandler = liftIO $ do
 
+  let templateModuleName = $(Path.mkRelFile "Render")
+
+  let codeMod :: Text -> Either MkUserFileError Text
+      codeMod templateCode = do
+
+        let modifyNoColonCase :: Text -> Text
+            modifyNoColonCase txt =
+              let targetCode = "[ Text str ]"
+              in
+              -- strip is better than isInfixOf.
+              -- It makes sure the line is only "[ Text str ]"
+              if not $ Text.strip txt == targetCode then
+                txt
+              else
+                let ( leadingSpaces, _ ) = breakOn targetCode txt
+                in
+                Text.append leadingSpaces "[ Text \"test\" ]"
+                
+
+        pure $ Text.unlines $
+          map modifyNoColonCase $ Text.lines templateCode
+            
+
+  userFileName <-
+    tryMkUserFile templatesDirPath templateModuleName ( elmRoot </> elmUsersDirPath ) codeMod
+
+  let elmUserFilePath = toFilePath $ elmUsersDirPath </> userFileName
+
   ( _, Just _, Just _, elmMakeProcHandle ) <- createProcess
-    ( proc "elm" [ "make", "src-templates/Render.elm", "--optimize", "--output=render.html" ] )
+    ( proc "elm" [ "make", elmUserFilePath, "--optimize", "--output=render.html" ] )
     { std_out = CreatePipe
     , std_err = CreatePipe
-    , Proc.cwd = Just "blog-apis/emojis-in-elm/"
+    , Proc.cwd = Just $ elmRoot & toFilePath
     }
 
   _ <- waitForProcess elmMakeProcHandle
 
-  html <- readFile "blog-apis/emojis-in-elm/render.html"
+  html <- readFile $ toFilePath $ elmRoot </> $(Path.mkRelFile "render.html")
 
   pure $ decodeUtf8With lenientDecode html
 
