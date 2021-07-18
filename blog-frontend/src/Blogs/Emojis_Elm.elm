@@ -64,6 +64,7 @@ import Element.Input as Input exposing (button)
 import Html
 import Html.Attributes as HtmlAttr
 import Http
+import Json.Encode as JEnc
 import Markdown
 import String.Extra as String
 import Url.Builder
@@ -139,14 +140,13 @@ update msg model =
 
         OnUserRender ->
             ( model
-            , Http.get
-                { url = Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "render" ] []
-                , expect = Http.expectString GotRenderResp
-                }
-              --, plainPutReq
-              --    (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "render" ] [])
-              --    (utf8StringBody model.firstCol)
-              --    (Http.expectString GotRenderResp)
+            , plainPutReq
+                (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "render" ] [])
+                (Http.jsonBody <|
+                    JEnc.object
+                        [ ( "noColonCase", JEnc.string "test" ) ]
+                )
+                (Http.expectString GotRenderResp)
             )
 
         GotRenderResp result ->

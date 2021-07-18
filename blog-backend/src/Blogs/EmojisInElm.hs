@@ -28,7 +28,6 @@ import           Prelude ( putStrLn )
 import           Servant
   ( (:>)
   , (:<|>)(..)
-  , Get
   , JSON
   , PlainText
   , Put
@@ -37,6 +36,7 @@ import           Servant
   )
 
 import           Control.Error ( note )
+import           Data.Aeson ( FromJSON )
 import           Data.Text ( breakOn )
 --import           Optics ( (^.) )
 import           RIO.ByteString as ByteStr ( readFile )
@@ -63,7 +63,7 @@ import           System.Process as Proc
 
 
 type API = "unicode-to-path" :> ReqBody '[PlainText] String :> Put '[Servant.JSON] ElmTestResp
-      :<|> "render" :> Get '[PlainText] Text
+      :<|> "render" :> ReqBody '[Servant.JSON] RenderUserCode :> Put '[PlainText] Text
 
 
 server :: ServerT API AppM
@@ -108,8 +108,14 @@ unicodeToPathHandler userCode = do
   pure elmTestResult
 
 
-renderHandler :: AppM Text
-renderHandler = liftIO $ do
+data RenderUserCode = RenderUserCode
+  { noColonCase :: Text 
+  } deriving ( Generic, Show )
+instance FromJSON RenderUserCode
+
+
+renderHandler :: RenderUserCode -> AppM Text
+renderHandler userCode = liftIO $ do
 
   let templateModuleName = $(Path.mkRelFile "Render")
 
@@ -127,7 +133,7 @@ renderHandler = liftIO $ do
               else
                 let ( leadingSpaces, _ ) = breakOn targetCode txt
                 in
-                Text.append leadingSpaces "[ Text \"test\" ]"
+                Text.append leadingSpaces ( userCode & noColonCase )
                 
 
         pure $ Text.unlines $
