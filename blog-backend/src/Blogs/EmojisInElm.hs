@@ -16,6 +16,7 @@ module Blogs.EmojisInElm
 
 import           Types ( AppM )
 import           Elm.Files ( tryMkUserFile )
+import qualified Elm.Make
 import           Elm.Test
   ( ElmTestResp
   , MkUserFileError(..)
@@ -62,7 +63,7 @@ import           System.Process as Proc
 
 
 type API = "unicode-to-path" :> ReqBody '[PlainText] String :> Put '[Servant.JSON] ElmTestResp
-      :<|> "render" :> ReqBody '[Servant.JSON] RenderUserCode :> Put '[PlainText] Text
+      :<|> "render" :> ReqBody '[Servant.JSON] RenderUserCode :> Put '[Servant.JSON] Elm.Make.Result
 
 
 server :: ServerT API AppM
@@ -113,7 +114,7 @@ data RenderUserCode = RenderUserCode
 instance FromJSON RenderUserCode
 
 
-renderHandler :: RenderUserCode -> AppM Text
+renderHandler :: RenderUserCode -> AppM Elm.Make.Result
 renderHandler userCode = liftIO $ do
 
   let templateModuleName = $(Path.mkRelFile "Render")
@@ -164,8 +165,8 @@ renderHandler userCode = liftIO $ do
   _ <- waitForProcess elmMakeProcHandle
 
   if not $ ByteStr.null err then
-    pure $ decodeUtf8With lenientDecode err
+    pure $ Elm.Make.CompilerError $ decodeUtf8With lenientDecode err
   else do
     html <- readFile $ toFilePath $ elmRoot </> elmRooted_UserHtmlFilePath
-    pure $ decodeUtf8With lenientDecode html
+    pure $ Elm.Make.Html $ decodeUtf8With lenientDecode html
 

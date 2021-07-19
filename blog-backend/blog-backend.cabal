@@ -28,6 +28,7 @@ library
       App
       Blogs.EmojisInElm
       Elm.Files
+      Elm.Make
       Elm.Test
       Types
       Utils.Random

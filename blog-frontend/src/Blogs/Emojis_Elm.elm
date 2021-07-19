@@ -428,11 +428,16 @@ replaceEmojis str =
                 httpErrorView httpError
 
             Ok (Elm.Make.CompilerError str) ->
-                Elm.Compiler.errorView str
+                el
+                    (squareBorder 10
+                        ++ [ width fill ]
+                    )
+                    (Elm.Compiler.errorView str)
 
             Ok (Elm.Make.Html str) ->
-                Element.html <|
-                    Html.iframe [ HtmlAttr.srcdoc <| str ] []
+                el [ width fill ] <|
+                    Element.html <|
+                        Html.iframe [ HtmlAttr.srcdoc <| str ] []
         ]
 
 
