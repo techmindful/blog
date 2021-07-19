@@ -6,6 +6,7 @@ import Element
         ( Element
         , column
         , image
+        , padding
         , paragraph
         , row
         , spacing
@@ -115,7 +116,9 @@ view _ =
         []
     <|
         column
-            [ spacing 40 ]
+            [ padding 10
+            , spacing 40
+            ]
             (List.map targetStringView targetStrings)
 
 

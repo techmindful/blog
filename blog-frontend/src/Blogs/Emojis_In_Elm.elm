@@ -39,6 +39,7 @@ import Element
         , column
         , el
         , fill
+        , height
         , image
         , padding
         , paddingEach
@@ -465,9 +466,15 @@ replaceEmojis str =
                     (Elm.Compiler.errorView str)
 
             Ok (Elm.Make.Html str) ->
-                el [ width fill ] <|
+                el
+                    [ width fill ]
+                <|
                     Element.html <|
-                        Html.iframe [ HtmlAttr.srcdoc <| str ] []
+                        Html.iframe
+                            [ HtmlAttr.srcdoc <| str
+                            , HtmlAttr.style "height" "700px"
+                            ]
+                            []
         ]
 
 
