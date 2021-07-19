@@ -15,6 +15,7 @@ import Common.Contents
         , codeBlock
         , codeBlock_
         , codeBlock__
+        , httpErrorView
         , inlineCode
         , italicText
         , plainImage
@@ -54,6 +55,7 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input exposing (button)
 import Elm.Compiler
+import Elm.Make
 import Elm.Shared
 import Elm.Test
     exposing
@@ -78,7 +80,7 @@ type alias Model =
     , isUnicodeToPathSkipped : Bool
     , firstColonPairInput : String
     , noColonCaseInput : String
-    , renderResult : Result Http.Error String
+    , renderResult : Result Http.Error Elm.Make.Result
     , error : Maybe Http.Error
     }
 
@@ -90,7 +92,7 @@ type Msg
     | OnUserInputFirstColonPair String
     | OnUserInputNoColonCase String
     | OnUserRender
-    | GotRenderResp (Result Http.Error String)
+    | GotRenderResp (Result Http.Error Elm.Make.Result)
 
 
 title =
@@ -104,7 +106,7 @@ init =
     , isUnicodeToPathSkipped = False
     , firstColonPairInput = ""
     , noColonCaseInput = ""
-    , renderResult = Ok ""
+    , renderResult = Ok <| Elm.Make.Html ""
     , error = Nothing
     }
 
@@ -151,7 +153,7 @@ update msg model =
                     JEnc.object
                         [ ( "noColonCase", JEnc.string model.noColonCaseInput ) ]
                 )
-                (Http.expectString GotRenderResp)
+                (Http.expectJson GotRenderResp Elm.Make.resultParser)
             )
 
         GotRenderResp result ->
@@ -421,20 +423,16 @@ replaceEmojis str =
             , label = Input.labelHidden ""
             }
         , borderedButton OnUserRender "Compile and Run!"
-        , el
-            [ width fill ]
-          <|
-            Element.html <|
-                Html.iframe
-                    [ HtmlAttr.srcdoc <|
-                        case model.renderResult of
-                            Err _ ->
-                                "HTTP Error"
+        , case model.renderResult of
+            Err httpError ->
+                httpErrorView httpError
 
-                            Ok str ->
-                                str
-                    ]
-                    []
+            Ok (Elm.Make.CompilerError str) ->
+                Elm.Compiler.errorView str
+
+            Ok (Elm.Make.Html str) ->
+                Element.html <|
+                    Html.iframe [ HtmlAttr.srcdoc <| str ] []
         ]
 
 

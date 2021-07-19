@@ -17,3 +17,7 @@ codeGray =
 
 codeGrey =
     codeGray
+
+
+red =
+    rgb255 240 0 0

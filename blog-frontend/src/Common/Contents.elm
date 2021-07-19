@@ -4,6 +4,7 @@ module Common.Contents exposing
     , codeBlock
     , codeBlock_
     , codeBlock__
+    , httpErrorView
     , inlineCode
     , italicText
     , plainImage
@@ -18,7 +19,7 @@ module Common.Contents exposing
     )
 
 import Common.Colors exposing (..)
-import Common.Styles exposing (roundedBorder)
+import Common.Styles exposing (roundedBorder, squareBorder)
 import Element
     exposing
         ( Element
@@ -41,7 +42,9 @@ import Element.Font as Font
 import Element.Input as Input exposing (button)
 import Html
 import Html.Attributes as HtmlAttr exposing (style)
+import Http
 import String.Extra as String
+import Utils.Networking exposing (httpErrorToStr)
 
 
 sizedText : Int -> String -> Element msg
@@ -180,3 +183,10 @@ plainImage src description =
         { src = src
         , description = description
         }
+
+
+httpErrorView : Http.Error -> Element msg
+httpErrorView error =
+    paragraph
+        (squareBorder 10 ++ [ Font.color red ])
+        [ text <| "HTTP Error: " ++ httpErrorToStr error ]
