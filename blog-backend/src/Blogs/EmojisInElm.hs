@@ -80,8 +80,8 @@ templatesDirPath :: Path Rel Dir
 templatesDirPath = elmRoot </> $(Path.mkRelDir "src-templates/")
 
 
-elmUsersDirPath :: Path Rel Dir
-elmUsersDirPath = $(Path.mkRelDir "src-users/")
+elmRooted_UsersDirPath :: Path Rel Dir
+elmRooted_UsersDirPath = $(Path.mkRelDir "src-users/")
 
 
 unicodeToPathHandler :: String -> AppM ElmTestResp
@@ -98,10 +98,10 @@ unicodeToPathHandler userCode = do
     liftIO $ tryMkUserFile
       templatesDirPath
       templateModuleName
-      ( elmRoot </> elmUsersDirPath )
+      ( elmRoot </> elmRooted_UsersDirPath )
       codeMod
 
-  elmTestResult <- liftIO $ runElmTest elmRoot $ elmUsersDirPath </> userFileName
+  elmTestResult <- liftIO $ runElmTest elmRoot $ elmRooted_UsersDirPath </> userFileName
 
   liftIO $ putStrLn $ show elmTestResult
 
@@ -140,13 +140,22 @@ renderHandler userCode = liftIO $ do
           map modifyNoColonCase $ Text.lines templateCode
             
 
-  userFileName <-
-    tryMkUserFile templatesDirPath templateModuleName ( elmRoot </> elmUsersDirPath ) codeMod
+  userElmFileName <-
+    tryMkUserFile templatesDirPath templateModuleName ( elmRoot </> elmRooted_UsersDirPath ) codeMod
 
-  let elmUserFilePath = toFilePath $ elmUsersDirPath </> userFileName
+  userHtmlFileName <-  -- Not catching InvalidExtension since ".html" should be valid.
+    Path.addExtension ".html" userElmFileName
+
+  let elmRooted_UserHtmlFilePath = elmRooted_UsersDirPath </> userHtmlFileName
 
   ( _, Just _, Just _, elmMakeProcHandle ) <- createProcess
-    ( proc "elm" [ "make", elmUserFilePath, "--optimize", "--output=render.html" ] )
+    ( proc "elm"
+        [ "make"
+        , toFilePath $ elmRooted_UsersDirPath </> userElmFileName
+        , "--optimize"
+        , "--output=" ++ ( elmRooted_UserHtmlFilePath & toFilePath )
+        ]
+    )
     { std_out = CreatePipe
     , std_err = CreatePipe
     , Proc.cwd = Just $ elmRoot & toFilePath
@@ -154,7 +163,7 @@ renderHandler userCode = liftIO $ do
 
   _ <- waitForProcess elmMakeProcHandle
 
-  html <- readFile $ toFilePath $ elmRoot </> $(Path.mkRelFile "render.html")
+  html <- readFile $ toFilePath $ elmRoot </> elmRooted_UserHtmlFilePath
 
   pure $ decodeUtf8With lenientDecode html
 
