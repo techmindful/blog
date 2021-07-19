@@ -39,7 +39,7 @@ import           Control.Error ( note )
 import           Data.Aeson ( FromJSON )
 import           Data.Text ( breakOn )
 --import           Optics ( (^.) )
-import           RIO.ByteString as ByteStr ( readFile )
+import           RIO.ByteString as ByteStr ( hGetContents, readFile, null )
 import           RIO.List ( initMaybe )
 import qualified RIO.Text as Text
 import           Path
@@ -57,7 +57,6 @@ import           System.Process as Proc
   , createProcess
   , proc
   , std_err
-  , std_out
   , waitForProcess
   )
 
@@ -148,7 +147,7 @@ renderHandler userCode = liftIO $ do
 
   let elmRooted_UserHtmlFilePath = elmRooted_UsersDirPath </> userHtmlFileName
 
-  ( _, Just _, Just _, elmMakeProcHandle ) <- createProcess
+  ( _, _, Just herr, elmMakeProcHandle ) <- createProcess
     ( proc "elm"
         [ "make"
         , toFilePath $ elmRooted_UsersDirPath </> userElmFileName
@@ -156,14 +155,17 @@ renderHandler userCode = liftIO $ do
         , "--output=" ++ ( elmRooted_UserHtmlFilePath & toFilePath )
         ]
     )
-    { std_out = CreatePipe
-    , std_err = CreatePipe
+    { std_err = CreatePipe
     , Proc.cwd = Just $ elmRoot & toFilePath
     }
 
+  err <- hGetContents herr
+
   _ <- waitForProcess elmMakeProcHandle
 
-  html <- readFile $ toFilePath $ elmRoot </> elmRooted_UserHtmlFilePath
-
-  pure $ decodeUtf8With lenientDecode html
+  if not $ ByteStr.null err then
+    pure $ decodeUtf8With lenientDecode err
+  else do
+    html <- readFile $ toFilePath $ elmRoot </> elmRooted_UserHtmlFilePath
+    pure $ decodeUtf8With lenientDecode html
 
