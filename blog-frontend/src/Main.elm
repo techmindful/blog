@@ -94,7 +94,7 @@ view model =
         [ Element.layout
             []
             (column
-                [ width <| Element.maximum 768 fill
+                [ width <| Element.maximum 1080 fill
                 , centerX
                 ]
                 [ banner

@@ -387,12 +387,42 @@ replaceEmojis str =
 
         firstColonPair : Maybe ( Int, Int )
         firstColonPair =
-            """
-                ++ model.firstColonPairInput
-                ++ """
+            Maybe.map2 Tuple.pair
                 (List.getAt 0 colonIndices)
                 (List.getAt 1 colonIndices)
-                    """
+    in
+    case firstColonPair of
+        -- No pair of colons. No emojis.
+        Nothing ->
+            """
+                ++ model.noColonCaseInput
+                ++ """
+        Just pair ->
+            let
+                firstColonIndex =
+                    Tuple.first pair
+
+                secondColonIndex =
+                    Tuple.second pair
+
+                possibleEmojiName =
+                    String.slice (firstColonIndex + 1) secondColonIndex str
+
+                isEmoji =
+                    True
+            in
+            -- Has colon of pairs, but it doesn't match an emoji name.
+            if not isEmoji then
+                (Text <| String.left secondColonIndex str)
+                    :: (replaceEmojis <| String.dropLeft secondColonIndex str)
+
+            -- Found an emoji
+            else
+                [ Text <| String.left firstColonIndex str
+                , Emoji possibleEmojiName
+                ] ++
+                (replaceEmojis <| String.dropLeft (secondColonIndex + 1) str)
+            """
         , paragraph
             []
             [ inlineCode "colonIndices"
