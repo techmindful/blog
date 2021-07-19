@@ -7,10 +7,13 @@ import Element
         , column
         , image
         , paragraph
+        , row
+        , spacing
         , text
         )
 import Html exposing (Html)
 import List.Extra as List
+import String.Extra as String
 
 
 type Piece
@@ -84,14 +87,36 @@ renderPiece piece =
 
 view : () -> Html ()
 view _ =
+    let
+        targetStrings : List String
+        targetStrings =
+            [ "No colon in this sentence."
+            , "One colon : here."
+            , "One colon: here."
+            , ":One colon at the start."
+            , "One colon at the end:"
+            , ":1f600:"
+            , "Hello :1f600:, nice to meet you. I :2764: coding :1f916:"
+            ]
+
+        targetStringView : String -> Element msg
+        targetStringView target =
+            column
+                [ spacing 10 ]
+                [ paragraph [] [ text <| "Target string - " ++ target ]
+                , row
+                    []
+                  <|
+                    [ text "Actual result - " ]
+                        ++ (List.map renderPiece <| replaceEmojis target)
+                ]
+    in
     Element.layout
         []
     <|
-        paragraph
-            []
-            (List.map renderPiece <|
-                replaceEmojis "Hello :1f600:, nice to meet you. I :2764: coding :1f916:"
-            )
+        column
+            [ spacing 40 ]
+            (List.map targetStringView targetStrings)
 
 
 main : Program () () ()
