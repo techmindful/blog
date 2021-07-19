@@ -1,7 +1,6 @@
-module BackendElmResp exposing
+module Elm.Test exposing
     ( ElmTestResp(..)
     , ElmTestResult(..)
-    , elmTestCompilerErrorView
     , elmTestRespDecoder
     , elmTestRespView
     , elmTestResultsView
@@ -28,6 +27,8 @@ import Element
         , width
         )
 import Element.Border as Border
+import Elm.Compiler
+import Elm.Shared exposing (title)
 import Html
 import Html.Attributes as HtmlAttr
 import Json.Decode
@@ -76,12 +77,6 @@ type alias Failure =
     }
 
 
-type alias CompilerError =
-    { errorType : String
-    , errorMsg : String
-    }
-
-
 elmTestRespDecoder : Decoder ElmTestResp
 elmTestRespDecoder =
     let
@@ -103,51 +98,6 @@ elmTestRespDecoder =
         [ map CompilerError_ <| field "compilerError" string
         , map Results <| list elmTestResultDecoder
         , null InternalServerError
-        ]
-
-
-title : String -> Element msg
-title str =
-    el
-        [ Border.widthEach { bottom = 2, top = 0, left = 0, right = 0 }
-        , paddingEach { bottom = 5, top = 0, left = 0, right = 0 }
-        , width fill
-        ]
-        (sizedText 24 str)
-
-
-elmTestCompilerErrorView : String -> Element msg
-elmTestCompilerErrorView compilerErrorStr =
-    column
-        [ width fill
-        , spacing 15
-        ]
-        [ title "Compiler Error"
-        , case Parser.run compilerErrorParser compilerErrorStr of
-            Err _ ->
-                plainPara "Error: Can't parse compiler error."
-
-            Ok compilerError ->
-                column
-                    [ spacing 20 ]
-                    [ text compilerError.errorType
-                    , column
-                        [ width fill
-                        , spacing 10
-                        ]
-                      <|
-                        List.map
-                            (\str ->
-                                paragraph
-                                    [ Element.htmlAttribute <|
-                                        HtmlAttr.style "white-space" "pre-wrap"
-                                    , Element.htmlAttribute <|
-                                        HtmlAttr.style "overflow-wrap" "anywhere"
-                                    ]
-                                    [ text str ]
-                            )
-                            (String.split "\n" compilerError.errorMsg)
-                    ]
         ]
 
 
@@ -248,27 +198,13 @@ elmTestRespView maybeResp allExpected =
             Just resp ->
                 case resp of
                     CompilerError_ compilerErrorStr ->
-                        elmTestCompilerErrorView compilerErrorStr
+                        Elm.Compiler.errorView compilerErrorStr
 
                     Results results ->
                         elmTestResultsView_ results allExpected
 
                     InternalServerError ->
                         internalServerErrorView
-
-
-compilerErrorParser : Parser CompilerError
-compilerErrorParser =
-    Parser.succeed CompilerError
-        |. Parser.symbol "-- "
-        |= (Parser.map (String.toTitleCase << String.toLower) <|
-                getChompedString <|
-                    chompUntil " -"
-           )
-        |. chompUntil ".elm"
-        |. Parser.symbol ".elm"
-        |. Parser.spaces
-        |= (getChompedString <| chompWhile (\_ -> True))
 
 
 areAllResultsPassed : List ElmTestResult -> Bool

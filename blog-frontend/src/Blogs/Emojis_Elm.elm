@@ -7,14 +7,6 @@ module Blogs.Emojis_Elm exposing
     , view
     )
 
-import BackendElmResp
-    exposing
-        ( ElmTestResp(..)
-        , ElmTestResult(..)
-        , elmTestCompilerErrorView
-        , elmTestRespDecoder
-        , elmTestResultsView
-        )
 import Common.Colors exposing (codeGray)
 import Common.Contents
     exposing
@@ -61,6 +53,15 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input exposing (button)
+import Elm.Compiler
+import Elm.Shared
+import Elm.Test
+    exposing
+        ( ElmTestResp(..)
+        , ElmTestResult(..)
+        , elmTestRespDecoder
+        , elmTestResultsView
+        )
 import Html
 import Html.Attributes as HtmlAttr
 import Http
@@ -441,12 +442,12 @@ unicodeToPathRespView : Maybe ElmTestResp -> Element msg
 unicodeToPathRespView maybeResp =
     case maybeResp of
         Nothing ->
-            BackendElmResp.noRespView_
+            Elm.Test.noRespView_
 
         Just resp ->
             case resp of
                 CompilerError_ errorMsg ->
-                    elmTestCompilerErrorView errorMsg
+                    Elm.Compiler.errorView errorMsg
 
                 Results results ->
                     let
@@ -497,7 +498,7 @@ unicodeToPathRespView maybeResp =
                         )
 
                 InternalServerError ->
-                    BackendElmResp.internalServerErrorView
+                    Elm.Test.internalServerErrorView
 
 
 grinEmojiPath =
