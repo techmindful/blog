@@ -1,4 +1,4 @@
-module Blogs.Emojis_Elm exposing
+module Blogs.Emojis_In_Elm exposing
     ( Model
     , Msg
     , init

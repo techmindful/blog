@@ -6,7 +6,7 @@ module Blogs.Types exposing
     , update
     )
 
-import Blogs.Emojis_Elm as Emojis_Elm
+import Blogs.Emojis_In_Elm as Emojis_In_Elm
 import Blogs.Inc as Inc
 import Element exposing (Element)
 
@@ -18,20 +18,20 @@ type alias Blog =
 
 
 type alias Models =
-    { emojis_Elm_Model : Emojis_Elm.Model
+    { emojis_Elm_Model : Emojis_In_Elm.Model
     , inc_Model : Inc.Model
     }
 
 
 type Msg
-    = Emojis_Elm_Msg Emojis_Elm.Msg
+    = Emojis_In_Elm_Msg Emojis_In_Elm.Msg
     | Inc_Msg Inc.Msg
     | Other_Msg
 
 
 init : Models
 init =
-    { emojis_Elm_Model = Emojis_Elm.init
+    { emojis_Elm_Model = Emojis_In_Elm.init
     , inc_Model = Inc.init
     }
 
@@ -39,13 +39,13 @@ init =
 update : Msg -> Models -> ( Models, Cmd Msg )
 update msg_ models =
     case msg_ of
-        Emojis_Elm_Msg msg ->
+        Emojis_In_Elm_Msg msg ->
             let
                 ( model, cmd ) =
-                    Emojis_Elm.update msg models.emojis_Elm_Model
+                    Emojis_In_Elm.update msg models.emojis_Elm_Model
             in
             ( { models | emojis_Elm_Model = model }
-            , Cmd.map Emojis_Elm_Msg cmd
+            , Cmd.map Emojis_In_Elm_Msg cmd
             )
 
         Inc_Msg msg ->

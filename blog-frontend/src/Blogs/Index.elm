@@ -4,7 +4,7 @@ module Blogs.Index exposing
     )
 
 import AssocList
-import Blogs.Emojis_Elm
+import Blogs.Emojis_In_Elm
 import Blogs.Inc
 import Blogs.Types exposing (Blog)
 import Element exposing (Element)
@@ -13,11 +13,11 @@ import List.Extra as List
 
 index : Blogs.Types.Models -> List Blog
 index models =
-    [ Blog (processTitle Blogs.Emojis_Elm.title) <|
+    [ Blog (processTitle Blogs.Emojis_In_Elm.title) <|
         Element.map
-            Blogs.Types.Emojis_Elm_Msg
+            Blogs.Types.Emojis_In_Elm_Msg
         <|
-            Blogs.Emojis_Elm.view models.emojis_Elm_Model
+            Blogs.Emojis_In_Elm.view models.emojis_Elm_Model
     , Blog (processTitle Blogs.Inc.title) <|
         Element.map
             Blogs.Types.Inc_Msg
