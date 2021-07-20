@@ -7,7 +7,7 @@ module Blogs.Emojis_In_Elm exposing
     , view
     )
 
-import Common.Colors exposing (codeGray)
+import Common.Colors exposing (codeGray, red)
 import Common.Contents
     exposing
         ( boldText
@@ -36,11 +36,14 @@ import Element
     exposing
         ( Element
         , alignRight
+        , alignTop
+        , centerY
         , column
         , el
         , fill
         , height
         , image
+        , onRight
         , padding
         , paddingEach
         , paddingXY
@@ -79,7 +82,10 @@ type alias Model =
     { unicodeToPathInput : String
     , unicodeToPathResp : Maybe ElmTestResp
     , isUnicodeToPathSkipped : Bool
-    , firstColonPairInput : String
+    , firstColonPairInput_Maybe : String
+    , isFirstColonPairInputTooLong_Maybe : Bool
+    , firstColonPairInput_Tuple : String
+    , isFirstColonPairInputTooLong_Tuple : Bool
     , noColonCaseInput : String
     , renderResult : Result Http.Error Elm.Make.Result
     , error : Maybe Http.Error
@@ -90,7 +96,8 @@ type Msg
     = OnUserInputUnicodeToPath String
     | OnUserRunUnicodeToPath
     | GotRunUnicodeToPathResp (Result Http.Error ElmTestResp)
-    | OnUserInputFirstColonPair String
+    | OnUserInputFirstColonPair_Maybe String
+    | OnUserInputFirstColonPair_Tuple String
     | OnUserInputNoColonCase String
     | OnUserRender
     | GotRenderResp (Result Http.Error Elm.Make.Result)
@@ -105,7 +112,10 @@ init =
     { unicodeToPathInput = ""
     , unicodeToPathResp = Nothing
     , isUnicodeToPathSkipped = False
-    , firstColonPairInput = ""
+    , firstColonPairInput_Maybe = ""
+    , isFirstColonPairInputTooLong_Maybe = False
+    , firstColonPairInput_Tuple = ""
+    , isFirstColonPairInputTooLong_Tuple = False
     , noColonCaseInput = ""
     , renderResult = Ok <| Elm.Make.Html ""
     , error = Nothing
@@ -140,8 +150,29 @@ update msg model =
                     , Cmd.none
                     )
 
-        OnUserInputFirstColonPair str ->
-            ( { model | firstColonPairInput = str }, Cmd.none )
+        OnUserInputFirstColonPair_Maybe str ->
+            if String.length str >= 10 then
+                ( { model | isFirstColonPairInputTooLong_Maybe = True }, Cmd.none )
+
+            else
+                ( { model
+                    | firstColonPairInput_Maybe = str
+                    , isFirstColonPairInputTooLong_Maybe = False
+                  }
+                , Cmd.none
+                )
+
+        OnUserInputFirstColonPair_Tuple str ->
+            if String.length str >= 10 then
+                ( { model | isFirstColonPairInputTooLong_Tuple = True }, Cmd.none )
+
+            else
+                ( { model
+                    | firstColonPairInput_Tuple = str
+                    , isFirstColonPairInputTooLong_Tuple = False
+                  }
+                , Cmd.none
+                )
 
         OnUserInputNoColonCase str ->
             ( { model | noColonCaseInput = str }, Cmd.none )
@@ -165,6 +196,13 @@ update msg model =
 
 view : Model -> Element Msg
 view model =
+    let
+        isFirstColonPairInputCorrect_Maybe =
+            model.firstColonPairInput_Maybe == "map2"
+
+        isFirstColonPairInputCorrect_Tuple =
+            model.firstColonPairInput_Tuple == "pair"
+    in
     column
         [ width fill
         , blogViewPadding
@@ -388,7 +426,11 @@ replaceEmojis str =
 
         firstColonPair : Maybe ( Int, Int )
         firstColonPair =
-            Maybe.map2 Tuple.pair
+            """
+                ++ ("Maybe." ++ model.firstColonPairInput_Maybe)
+                ++ " "
+                ++ ("Tuple." ++ model.firstColonPairInput_Tuple)
+                ++ """
                 (List.getAt 0 colonIndices)
                 (List.getAt 1 colonIndices)
     in
@@ -438,21 +480,72 @@ replaceEmojis str =
                 "https://package.elm-lang.org/packages/elm-community/list-extra/latest/List-Extra#getAt"
                 "elm-community/list-extra"
             , text
-                """ to attempt to get the indices of first and second colons. Complete the first line which will combine the two Maybe indices into a Maybe tuple!
+                """ to attempt to get the indices of first and second colons. Can you fill in the right functions to use?
                 """
             ]
-        , row
-            []
-            [ text "Maybe."
-            , text "Tuple."
+        , let
+            tooLongHint : Element msg
+            tooLongHint =
+                el
+                    [ Font.color red ]
+                    (text "The answer is shorter.")
+
+            withCorrectMark : Bool -> Element Msg -> Element Msg
+            withCorrectMark isCorrect inputView =
+                el
+                    [ onRight <|
+                        if isCorrect then
+                            image
+                                [ centerY ]
+                                { src = "/static/noto-emoji/32/emoji_u2705.png"
+                                , description = "Tick"
+                                }
+
+                        else
+                            Element.none
+                    , centerY
+                    ]
+                    inputView
+          in
+          row
+            [ spacing 40 ]
+            [ column
+                [ spacing 10
+                , alignTop
+                ]
+                [ withCorrectMark isFirstColonPairInputCorrect_Maybe <|
+                    Input.text
+                        [ width <| Element.px 150 ]
+                        { onChange = OnUserInputFirstColonPair_Maybe
+                        , text = model.firstColonPairInput_Maybe
+                        , placeholder = Nothing
+                        , label = Input.labelLeft [] <| text "Maybe."
+                        }
+                , if model.isFirstColonPairInputTooLong_Maybe then
+                    tooLongHint
+
+                  else
+                    Element.none
+                ]
+            , column
+                [ spacing 10
+                , alignTop
+                ]
+                [ withCorrectMark isFirstColonPairInputCorrect_Tuple <|
+                    Input.text
+                        [ width <| Element.px 150 ]
+                        { onChange = OnUserInputFirstColonPair_Tuple
+                        , text = model.firstColonPairInput_Tuple
+                        , placeholder = Nothing
+                        , label = Input.labelLeft [] <| text "Tuple."
+                        }
+                , if model.isFirstColonPairInputTooLong_Tuple then
+                    tooLongHint
+
+                  else
+                    Element.none
+                ]
             ]
-        , Input.text
-            [ width fill ]
-            { onChange = OnUserInputNoColonCase
-            , text = model.noColonCaseInput
-            , placeholder = Nothing
-            , label = Input.labelHidden ""
-            }
         , borderedButton OnUserRender "Compile and Run!"
         , case model.renderResult of
             Err httpError ->
