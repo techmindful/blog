@@ -7,6 +7,7 @@ module Blogs.Emojis_In_Elm exposing
     , view
     )
 
+import Blogs.Common.Contents exposing (userFillableCode_)
 import Common.Colors exposing (codeGray, red)
 import Common.Contents
     exposing
@@ -87,6 +88,8 @@ type alias Model =
     , firstColonPairInput_Tuple : String
     , isFirstColonPairInputTooLong_Tuple : Bool
     , noColonCaseInput : String
+    , notEmojiCaseInput : String
+    , isEmojiCaseInput : String
     , renderResult : Result Http.Error Elm.Make.Result
     , error : Maybe Http.Error
     }
@@ -99,6 +102,8 @@ type Msg
     | OnUserInputFirstColonPair_Maybe String
     | OnUserInputFirstColonPair_Tuple String
     | OnUserInputNoColonCase String
+    | OnUserInputNotEmojiCase String
+    | OnUserInputIsEmojiCase String
     | OnUserRender
     | GotRenderResp (Result Http.Error Elm.Make.Result)
 
@@ -117,6 +122,8 @@ init =
     , firstColonPairInput_Tuple = ""
     , isFirstColonPairInputTooLong_Tuple = False
     , noColonCaseInput = ""
+    , notEmojiCaseInput = ""
+    , isEmojiCaseInput = ""
     , renderResult = Ok <| Elm.Make.Html ""
     , error = Nothing
     }
@@ -176,6 +183,12 @@ update msg model =
 
         OnUserInputNoColonCase str ->
             ( { model | noColonCaseInput = str }, Cmd.none )
+
+        OnUserInputNotEmojiCase str ->
+            ( { model | notEmojiCaseInput = str }, Cmd.none )
+
+        OnUserInputIsEmojiCase str ->
+            ( { model | isEmojiCaseInput = str }, Cmd.none )
 
         OnUserRender ->
             ( model
@@ -394,7 +407,7 @@ unicodeToPath unicode =
             []
             [ text
                 """
-                Turns out it isn't hard to write a recursive algorithm for this. The function first tries to locate a pair of colons in the input string. If it can't find at least 2 colons, that means there definitely isn't any emoji in the string, and it should just be parsed as 
+                Turns out it isn't hard to write a recursive algorithm for this. The function first tries to locate a pair of colons in the input string. If it can't find at least 2 colons, that means there definitely isn't any emoji in the string, and the whole string should just be parsed as 
                 """
             , inlineCode "Text"
             , text
@@ -427,9 +440,9 @@ replaceEmojis str =
         firstColonPair : Maybe ( Int, Int )
         firstColonPair =
             """
-                ++ ("Maybe." ++ model.firstColonPairInput_Maybe)
+                ++ ("Maybe." ++ userFillableCode_ model.firstColonPairInput_Maybe)
                 ++ " "
-                ++ ("Tuple." ++ model.firstColonPairInput_Tuple)
+                ++ ("Tuple." ++ userFillableCode_ model.firstColonPairInput_Tuple)
                 ++ """
                 (List.getAt 0 colonIndices)
                 (List.getAt 1 colonIndices)
@@ -438,8 +451,9 @@ replaceEmojis str =
         -- No pair of colons. No emojis.
         Nothing ->
             """
-                ++ model.noColonCaseInput
+                ++ userFillableCode_ model.noColonCaseInput
                 ++ """
+
         Just pair ->
             let
                 firstColonIndex =
@@ -457,13 +471,14 @@ replaceEmojis str =
             -- Has colon of pairs, but it doesn't match an emoji name.
             if not isEmoji then
                 (Text <| String.left secondColonIndex str)
-                    :: (replaceEmojis <| String.dropLeft secondColonIndex str)
-
+                    :: """
+                ++ userFillableCode_ model.notEmojiCaseInput
+                ++ """
             -- Found an emoji
             else
-                [ Text <| String.left firstColonIndex str
-                , Emoji possibleEmojiName
-                ] ++
+"""
+                ++ (indentMultiline 16 <| userFillableCode_ model.isEmojiCaseInput)
+                ++ """ ++
                 (replaceEmojis <| String.dropLeft (secondColonIndex + 1) str)
             """
         , paragraph
@@ -546,7 +561,46 @@ replaceEmojis str =
                     Element.none
                 ]
             ]
+        , Input.text
+            [ width fill ]
+            { onChange = OnUserInputNoColonCase
+            , text = model.noColonCaseInput
+            , placeholder = Nothing
+            , label =
+                Input.labelAbove [ paddingEach { edges | bottom = 5 } ] <|
+                    paragraph
+                        []
+                        [ text "Complete the case where "
+                        , inlineCode "firstColonPair"
+                        , text " is "
+                        , inlineCode "Nothing"
+                        , text ":"
+                        ]
+            }
         , borderedButton OnUserRender "Compile and Run!"
+        , paragraph
+            []
+            [ text
+                """
+                If there is a colon pair, we get the indices of the first and second colon, and slice out the string between the colons. We'll be implementing the checking of whether that string is a valid emoji unicode later. Can you complete what should be appended in the not emoji case?
+                """
+            ]
+        , Input.text
+            [ width fill ]
+            { onChange = OnUserInputNotEmojiCase
+            , text = model.notEmojiCaseInput
+            , placeholder = Nothing
+            , label = Input.labelHidden ""
+            }
+        , plainPara "And what's to be concatenated in the \"Found an emoji\" case?"
+        , Input.multiline
+            [ width fill ]
+            { onChange = OnUserInputIsEmojiCase
+            , text = model.isEmojiCaseInput
+            , placeholder = Nothing
+            , label = Input.labelHidden ""
+            , spellcheck = False
+            }
         , case model.renderResult of
             Err httpError ->
                 httpErrorView httpError
@@ -632,6 +686,19 @@ unicodeToPathRespView maybeResp =
 
                 InternalServerError ->
                     Elm.Test.internalServerErrorView
+
+
+indentMultiline : Int -> String -> String
+indentMultiline numSpaces str =
+    let
+        indentLine : String -> String
+        indentLine line =
+            String.repeat numSpaces " " ++ line
+    in
+    str
+        |> String.lines
+        |> List.map indentLine
+        |> String.join "\n"
 
 
 grinEmojiPath =
