@@ -26,7 +26,7 @@ source-repository head
 library
   exposed-modules:
       App
-      Blogs.EmojisInElm
+      Blogs.Emojis_In_Elm
       Elm.Files
       Elm.Make
       Elm.Test

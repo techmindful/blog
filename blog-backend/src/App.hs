@@ -16,7 +16,7 @@
 module App where
 
 import           Types ( AppM, AppState )
-import qualified Blogs.EmojisInElm 
+import qualified Blogs.Emojis_In_Elm 
 
 import           RIO hiding ( Handler )
 
@@ -33,13 +33,13 @@ import           Network.Wai.Handler.Warp as Warp
 --import           Optics ( (^.) )
 
 
-type API = "blog-apis" :> "emojis-in-elm" :> Blogs.EmojisInElm.API
+type API = "blog-apis" :> "emojis-in-elm" :> Blogs.Emojis_In_Elm.API
 
 
 server :: ServerT API AppM
 server =
 
-  Blogs.EmojisInElm.server
+  Blogs.Emojis_In_Elm.server
 
 
 api :: Servant.Proxy API

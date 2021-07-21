@@ -196,7 +196,10 @@ update msg model =
                 (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "render" ] [])
                 (Http.jsonBody <|
                     JEnc.object
-                        [ ( "noColonCase", JEnc.string model.noColonCaseInput ) ]
+                        [ ( "noColonCase", JEnc.string model.noColonCaseInput )
+                        , ( "notEmojiCase", JEnc.string model.notEmojiCaseInput )
+                        , ( "isEmojiCase", JEnc.string model.isEmojiCaseInput )
+                        ]
                 )
                 (Http.expectJson GotRenderResp Elm.Make.resultParser)
             )

@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeOperators #-}
 
 
-module Blogs.EmojisInElm
+module Blogs.Emojis_In_Elm
   ( API
   , server
   , unicodeToPathHandler
@@ -109,7 +109,9 @@ unicodeToPathHandler userCode = do
 
 
 data RenderUserCode = RenderUserCode
-  { noColonCase :: Text 
+  { noColonCase  :: Text 
+  , notEmojiCase :: Text
+  , isEmojiCase  :: Text
   } deriving ( Generic, Show )
 instance FromJSON RenderUserCode
 
@@ -122,23 +124,43 @@ renderHandler userCode = liftIO $ do
   let codeMod :: Text -> Either MkUserFileError Text
       codeMod templateCode = do
 
-        let modifyNoColonCase :: Text -> Text
-            modifyNoColonCase txt =
-              let targetCode = "[ Text str ]"
-              in
-              -- strip is better than isInfixOf.
-              -- It makes sure the line is only "[ Text str ]"
-              if not $ Text.strip txt == targetCode then
-                txt
+        let modifyTemplateLine :: Text -> Text -> Text -> Text
+            modifyTemplateLine templateCode' userCode' line =
+              -- Find the target template line.
+              --    strip is better than isInfixOf
+              --    It makes sure the line is only that text.
+              if not $ Text.strip line == templateCode' then
+                line
               else
-                let ( leadingSpaces, _ ) = breakOn targetCode txt
+                -- Preserve the original leading spaces.
+                let ( leadingSpaces, _ ) = breakOn templateCode' line
                 in
-                Text.append leadingSpaces ( userCode & noColonCase )
-                
+                -- User code may be multiple lines. Break it into lines,
+                -- and insert leading spaces at front for each.
+                if Text.any ( == '\n' ) userCode' then
+                  userCode' & Text.lines
+                            & map ( \userLine -> leadingSpaces <> userLine )
+                            & Text.unlines
+                -- If user code is single line:
+                else
+                  leadingSpaces <> userCode' 
 
-        pure $ Text.unlines $
-          map modifyNoColonCase $ Text.lines templateCode
-            
+        templateCode & Text.lines
+                     & map ( modifyTemplateLine
+                               "-- Insert noColonCase here."
+                               ( userCode & noColonCase )
+                           )
+                     & map ( modifyTemplateLine
+                               "-- Insert notEmojiCase here."
+                               ( ":: " <> ( userCode & notEmojiCase ) )
+                           )
+                     & map ( modifyTemplateLine
+                               "-- Insert isEmojiCase here."
+                               ( userCode & isEmojiCase )
+                           )
+                     & Text.unlines
+                     & pure
+
 
   userElmFileName <-
     tryMkUserFile templatesDirPath templateModuleName ( elmRoot </> elmRooted_UsersDirPath ) codeMod
