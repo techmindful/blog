@@ -137,13 +137,17 @@ renderHandler userCode = liftIO $ do
                 in
                 -- User code may be multiple lines. Break it into lines,
                 -- and insert leading spaces at front for each.
-                if Text.any ( == '\n' ) userCode' then
-                  userCode' & Text.lines
-                            & map ( \userLine -> leadingSpaces <> userLine )
-                            & Text.unlines
-                -- If user code is single line:
-                else
-                  leadingSpaces <> userCode' 
+                userCode' & Text.lines
+                          & map ( \userLine -> leadingSpaces <> userLine )
+                          & Text.unlines
+                          -- If `unlines` added a '\n' at end, where there was none
+                          -- Remove it.
+                          & ( \txt ->
+                                if Text.takeEnd 1 userCode' == "\n" then
+                                  txt
+                                else
+                                  Text.dropSuffix "\n" txt
+                            )
 
         templateCode & Text.lines
                      & map ( modifyTemplateLine

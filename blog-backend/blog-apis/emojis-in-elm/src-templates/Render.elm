@@ -67,7 +67,7 @@ replaceEmojis str =
             else
                 -- Found an emoji
                 -- Insert isEmojiCase here.
-                    ++ (replaceEmojis <| String.dropLeft (secondColonIndex + 1) str)
+                ++ (replaceEmojis <| String.dropLeft (secondColonIndex + 1) str)
 
 
 renderPiece : Piece -> Element msg

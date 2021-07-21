@@ -481,8 +481,8 @@ replaceEmojis str =
             else
 """
                 ++ (indentMultiline 16 <| userFillableCode_ model.isEmojiCaseInput)
-                ++ """ ++
-                (replaceEmojis <| String.dropLeft (secondColonIndex + 1) str)
+                ++ """
+                ++ (replaceEmojis <| String.dropLeft (secondColonIndex + 1) str)
             """
         , paragraph
             []
@@ -580,7 +580,6 @@ replaceEmojis str =
                         , text ":"
                         ]
             }
-        , borderedButton OnUserRender "Compile and Run!"
         , paragraph
             []
             [ text
@@ -604,6 +603,7 @@ replaceEmojis str =
             , label = Input.labelHidden ""
             , spellcheck = False
             }
+        , borderedButton OnUserRender "Compile and Run!"
         , case model.renderResult of
             Err httpError ->
                 httpErrorView httpError
