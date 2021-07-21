@@ -34,7 +34,9 @@ import           Servant
   , Put
   , ReqBody
   , ServerT
+  , err401
   )
+import qualified Servant
 
 import           Control.Error ( note )
 import           Data.Aeson ( FromJSON )
@@ -86,25 +88,30 @@ elmRooted_UsersDirPath = $(Path.mkRelDir "src-users/")
 unicodeToPathHandler :: Text -> AppM ElmTestResp
 unicodeToPathHandler userCode = do
 
-  let templateModuleName = $(Path.mkRelFile "UnicodeToPath")
+  if Text.length userCode >= 100 then
+    Servant.throwError err401
 
-  let codeMod :: Text -> Either MkUserFileError Text
-      codeMod templateCode = do
-        ( withoutEndNewline, _ ) <- note EmptyTemplate $ unsnoc templateCode
-        pure $ withoutEndNewline <> userCode
+  else do
 
-  userFileName  <-
-    liftIO $ tryMkUserFile
-      templatesDirPath
-      templateModuleName
-      ( elmRoot </> elmRooted_UsersDirPath )
-      codeMod
+    let templateModuleName = $(Path.mkRelFile "UnicodeToPath")
 
-  elmTestResult <- liftIO $ runElmTest elmRoot $ elmRooted_UsersDirPath </> userFileName
+    let codeMod :: Text -> Either MkUserFileError Text
+        codeMod templateCode = do
+          ( withoutEndNewline, _ ) <- note EmptyTemplate $ unsnoc templateCode
+          pure $ withoutEndNewline <> userCode
 
-  liftIO $ putStrLn $ show elmTestResult
+    userFileName  <-
+      liftIO $ tryMkUserFile
+        templatesDirPath
+        templateModuleName
+        ( elmRoot </> elmRooted_UsersDirPath )
+        codeMod
 
-  pure elmTestResult
+    elmTestResult <- liftIO $ runElmTest elmRoot $ elmRooted_UsersDirPath </> userFileName
+
+    liftIO $ putStrLn $ show elmTestResult
+
+    pure elmTestResult
 
 
 data RenderUserCode = RenderUserCode
@@ -116,82 +123,90 @@ instance FromJSON RenderUserCode
 
 
 renderHandler :: RenderUserCode -> AppM Elm.Make.Result
-renderHandler userCode = liftIO $ do
+renderHandler userCode = do
 
-  let templateModuleName = $(Path.mkRelFile "Render")
+  if   Text.length ( userCode & noColonCase  ) >= 40
+    || Text.length ( userCode & notEmojiCase ) >= 100
+    || Text.length ( userCode & isEmojiCase  ) >= 120
+  then
+    Servant.throwError err401
 
-  let codeMod :: Text -> Either MkUserFileError Text
-      codeMod templateCode = do
+  else liftIO $ do
 
-        let modifyTemplateLine :: Text -> Text -> Text -> Text
-            modifyTemplateLine templateCode' userCode' line =
-              -- Find the target template line.
-              --    strip is better than isInfixOf
-              --    It makes sure the line is only that text.
-              if not $ Text.strip line == templateCode' then
-                line
-              else
-                -- Preserve the original leading spaces.
-                let ( leadingSpaces, _ ) = breakOn templateCode' line
-                in
-                -- User code may be multiple lines. Break it into lines,
-                -- and insert leading spaces at front for each.
-                userCode' & Text.lines
-                          & map ( \userLine -> leadingSpaces <> userLine )
-                          & Text.unlines
-                          -- If `unlines` added a '\n' at end, where there was none
-                          -- Remove it.
-                          & ( \txt ->
-                                if Text.takeEnd 1 userCode' == "\n" then
-                                  txt
-                                else
-                                  Text.dropSuffix "\n" txt
-                            )
+    let templateModuleName = $(Path.mkRelFile "Render")
 
-        templateCode & Text.lines
-                     & map ( modifyTemplateLine
-                               "-- Insert noColonCase here."
-                               ( userCode & noColonCase )
-                           )
-                     & map ( modifyTemplateLine
-                               "-- Insert notEmojiCase here."
-                               ( ":: " <> ( userCode & notEmojiCase ) )
-                           )
-                     & map ( modifyTemplateLine
-                               "-- Insert isEmojiCase here."
-                               ( userCode & isEmojiCase )
-                           )
-                     & Text.unlines
-                     & pure
+    let codeMod :: Text -> Either MkUserFileError Text
+        codeMod templateCode = do
+
+          let modifyTemplateLine :: Text -> Text -> Text -> Text
+              modifyTemplateLine templateCode' userCode' line =
+                -- Find the target template line.
+                --    strip is better than isInfixOf
+                --    It makes sure the line is only that text.
+                if not $ Text.strip line == templateCode' then
+                  line
+                else
+                  -- Preserve the original leading spaces.
+                  let ( leadingSpaces, _ ) = breakOn templateCode' line
+                  in
+                  -- User code may be multiple lines. Break it into lines,
+                  -- and insert leading spaces at front for each.
+                  userCode' & Text.lines
+                            & map ( \userLine -> leadingSpaces <> userLine )
+                            & Text.unlines
+                            -- If `unlines` added a '\n' at end, where there was none
+                            -- Remove it.
+                            & ( \txt ->
+                                  if Text.takeEnd 1 userCode' == "\n" then
+                                    txt
+                                  else
+                                    Text.dropSuffix "\n" txt
+                              )
+
+          templateCode & Text.lines
+                       & map ( modifyTemplateLine
+                                 "-- Insert noColonCase here."
+                                 ( userCode & noColonCase )
+                             )
+                       & map ( modifyTemplateLine
+                                 "-- Insert notEmojiCase here."
+                                 ( ":: " <> ( userCode & notEmojiCase ) )
+                             )
+                       & map ( modifyTemplateLine
+                                 "-- Insert isEmojiCase here."
+                                 ( userCode & isEmojiCase )
+                             )
+                       & Text.unlines
+                       & pure
 
 
-  userElmFileName <-
-    tryMkUserFile templatesDirPath templateModuleName ( elmRoot </> elmRooted_UsersDirPath ) codeMod
+    userElmFileName <-
+      tryMkUserFile templatesDirPath templateModuleName ( elmRoot </> elmRooted_UsersDirPath ) codeMod
 
-  userHtmlFileName <-  -- Not catching InvalidExtension since ".html" should be valid.
-    Path.addExtension ".html" userElmFileName
+    userHtmlFileName <-  -- Not catching InvalidExtension since ".html" should be valid.
+      Path.addExtension ".html" userElmFileName
 
-  let elmRooted_UserHtmlFilePath = elmRooted_UsersDirPath </> userHtmlFileName
+    let elmRooted_UserHtmlFilePath = elmRooted_UsersDirPath </> userHtmlFileName
 
-  ( _, _, Just herr, elmMakeProcHandle ) <- createProcess
-    ( proc "elm"
-        [ "make"
-        , toFilePath $ elmRooted_UsersDirPath </> userElmFileName
-        , "--optimize"
-        , "--output=" ++ ( elmRooted_UserHtmlFilePath & toFilePath )
-        ]
-    )
-    { std_err = CreatePipe
-    , Proc.cwd = Just $ elmRoot & toFilePath
-    }
+    ( _, _, Just herr, elmMakeProcHandle ) <- createProcess
+      ( proc "elm"
+          [ "make"
+          , toFilePath $ elmRooted_UsersDirPath </> userElmFileName
+          , "--optimize"
+          , "--output=" ++ ( elmRooted_UserHtmlFilePath & toFilePath )
+          ]
+      )
+      { std_err = CreatePipe
+      , Proc.cwd = Just $ elmRoot & toFilePath
+      }
 
-  err <- hGetContents herr
+    err <- hGetContents herr
 
-  _ <- waitForProcess elmMakeProcHandle
+    _ <- waitForProcess elmMakeProcHandle
 
-  if not $ ByteStr.null err then
-    pure $ Elm.Make.CompilerError $ decodeUtf8With lenientDecode err
-  else do
-    html <- readFile $ toFilePath $ elmRoot </> elmRooted_UserHtmlFilePath
-    pure $ Elm.Make.Html $ decodeUtf8With lenientDecode html
+    if not $ ByteStr.null err then
+      pure $ Elm.Make.CompilerError $ decodeUtf8With lenientDecode err
+    else do
+      html <- readFile $ toFilePath $ elmRoot </> elmRooted_UserHtmlFilePath
+      pure $ Elm.Make.Html $ decodeUtf8With lenientDecode html
 
