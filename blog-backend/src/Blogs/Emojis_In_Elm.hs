@@ -38,10 +38,9 @@ import           Servant
 
 import           Control.Error ( note )
 import           Data.Aeson ( FromJSON )
-import           Data.Text ( breakOn )
+import           Data.Text ( breakOn, unsnoc )
 --import           Optics ( (^.) )
 import           RIO.ByteString as ByteStr ( hGetContents, readFile, null )
-import           RIO.List ( initMaybe )
 import qualified RIO.Text as Text
 import           Path
   ( (</>)
@@ -62,7 +61,7 @@ import           System.Process as Proc
   )
 
 
-type API = "unicode-to-path" :> ReqBody '[PlainText] String :> Put '[Servant.JSON] ElmTestResp
+type API = "unicode-to-path" :> ReqBody '[PlainText] Text :> Put '[Servant.JSON] ElmTestResp
       :<|> "render" :> ReqBody '[Servant.JSON] RenderUserCode :> Put '[Servant.JSON] Elm.Make.Result
 
 
@@ -84,15 +83,15 @@ elmRooted_UsersDirPath :: Path Rel Dir
 elmRooted_UsersDirPath = $(Path.mkRelDir "src-users/")
 
 
-unicodeToPathHandler :: String -> AppM ElmTestResp
+unicodeToPathHandler :: Text -> AppM ElmTestResp
 unicodeToPathHandler userCode = do
 
   let templateModuleName = $(Path.mkRelFile "UnicodeToPath")
 
   let codeMod :: Text -> Either MkUserFileError Text
       codeMod templateCode = do
-        withoutEndNewline <- note EmptyTemplate $ initMaybe $ Text.unpack templateCode
-        pure $ Text.pack $ withoutEndNewline ++ userCode
+        ( withoutEndNewline, _ ) <- note EmptyTemplate $ unsnoc templateCode
+        pure $ withoutEndNewline <> userCode
 
   userFileName  <-
     liftIO $ tryMkUserFile
