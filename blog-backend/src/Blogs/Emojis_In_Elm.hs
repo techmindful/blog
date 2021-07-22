@@ -34,7 +34,7 @@ import           Servant
   , Put
   , ReqBody
   , ServerT
-  , err401
+  , err400
   )
 import qualified Servant
 
@@ -89,7 +89,7 @@ unicodeToPathHandler :: Text -> AppM ElmTestResp
 unicodeToPathHandler userCode = do
 
   if Text.length userCode >= 100 then
-    Servant.throwError err401
+    Servant.throwError err400
 
   else do
 
@@ -129,7 +129,7 @@ renderHandler userCode = do
     || Text.length ( userCode & notEmojiCase ) >= 100
     || Text.length ( userCode & isEmojiCase  ) >= 120
   then
-    Servant.throwError err401
+    Servant.throwError err400
 
   else liftIO $ do
 
