@@ -141,10 +141,14 @@ update msg model =
 
         OnUserRunUnicodeToPath ->
             ( model
-            , plainPutReq
-                (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "unicode-to-path" ] [])
-                (utf8StringBody model.unicodeToPathInput)
-                (Http.expectJson GotRunUnicodeToPathResp elmTestRespDecoder)
+            , if String.length model.unicodeToPathInput > unicodeToPathInputMaxLength then
+                Cmd.none
+
+              else
+                plainPutReq
+                    (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "unicode-to-path" ] [])
+                    (utf8StringBody model.unicodeToPathInput)
+                    (Http.expectJson GotRunUnicodeToPathResp elmTestRespDecoder)
             )
 
         GotRunUnicodeToPathResp result ->
@@ -337,7 +341,8 @@ unicodeToPath unicode =
             , width fill
             ]
             (unicodeToPathRespView model.unicodeToPathResp)
-        , Input.text
+        , limitedLengthInput
+            unicodeToPathInputMaxLength
             [ width fill ]
             { onChange = OnUserInputUnicodeToPath
             , text = model.unicodeToPathInput
@@ -579,6 +584,7 @@ replaceEmojis str =
                 ]
             ]
         , limitedLengthInput
+            noColonCaseInputMaxLength
             [ width fill ]
             { onChange = OnUserInputNoColonCase
             , text = model.noColonCaseInput
@@ -594,7 +600,6 @@ replaceEmojis str =
                         , text ":"
                         ]
             }
-            noColonCaseInputMaxLength
         , paragraph
             []
             [ text
@@ -603,15 +608,16 @@ replaceEmojis str =
                 """
             ]
         , limitedLengthInput
+            notEmojiCaseInputMaxLength
             [ width fill ]
             { onChange = OnUserInputNotEmojiCase
             , text = model.notEmojiCaseInput
             , placeholder = Nothing
             , label = Input.labelHidden ""
             }
-            notEmojiCaseInputMaxLength
         , plainPara "And what's to be concatenated in the \"Found an emoji\" case?"
         , limitedLengthMultiline
+            isEmojiCaseInputMaxLength
             [ width fill
             , Font.family [ Font.monospace ]
             ]
@@ -621,7 +627,6 @@ replaceEmojis str =
             , label = Input.labelHidden ""
             , spellcheck = False
             }
-            isEmojiCaseInputMaxLength
         , borderedButton OnUserRender "Compile and Run!"
         , case model.renderResult of
             Err httpError ->
@@ -721,6 +726,10 @@ indentMultiline numSpaces str =
         |> String.lines
         |> List.map indentLine
         |> String.join "\n"
+
+
+unicodeToPathInputMaxLength =
+    99
 
 
 noColonCaseInputMaxLength =

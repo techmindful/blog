@@ -189,16 +189,16 @@ plainImage src description =
 
 
 limitedLengthInput :
-    List (Element.Attribute msg)
+    Int
+    -> List (Element.Attribute msg)
     ->
         { onChange : String -> msg
         , text : String
         , placeholder : Maybe (Input.Placeholder msg)
         , label : Input.Label msg
         }
-    -> Int
     -> Element msg
-limitedLengthInput attrs r maxLength =
+limitedLengthInput maxLength attrs r =
     column
         [ width fill
         , spacing 10
@@ -219,7 +219,8 @@ limitedLengthInput attrs r maxLength =
 
 
 limitedLengthMultiline :
-    List (Element.Attribute msg)
+    Int
+    -> List (Element.Attribute msg)
     ->
         { onChange : String -> msg
         , text : String
@@ -227,9 +228,8 @@ limitedLengthMultiline :
         , label : Input.Label msg
         , spellcheck : Bool
         }
-    -> Int
     -> Element msg
-limitedLengthMultiline attrs r maxLength =
+limitedLengthMultiline maxLength attrs r =
     column
         [ width fill
         , spacing 10
