@@ -335,12 +335,6 @@ unicodeToPath : String -> String
 unicodeToPath unicode =
     """
                     ++ model.unicodeToPathInput
-        , el
-            [ Border.width 2
-            , padding 10
-            , width fill
-            ]
-            (unicodeToPathRespView model.unicodeToPathResp)
         , limitedLengthInput
             unicodeToPathInputMaxLength
             [ width fill ]
@@ -350,6 +344,12 @@ unicodeToPath unicode =
             , label = Input.labelHidden ""
             }
         , borderedButton OnUserRunUnicodeToPath "Compile and Run!"
+        , el
+            [ Border.width 2
+            , padding 10
+            , width fill
+            ]
+            (unicodeToPathRespView model.unicodeToPathResp)
         , paragraph
             []
             [ text "Now that we can find the image based on the unicode the user has entered like "
@@ -649,6 +649,10 @@ replaceEmojis str =
                             , HtmlAttr.style "height" "700px"
                             ]
                             []
+        , plainPara
+            """
+            If your results match the expected, then congrats! We are now parsing emojis in a piece of text. Except for the last case. It's vital to check if the string between a colon pair is meant for an emoji. Not doing so can throw off the parsing of the whole string. This will be included in the next part of the guide, which I'll publish once it's completed.
+            """
         ]
 
 
