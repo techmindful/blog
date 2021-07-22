@@ -19,6 +19,8 @@ import Common.Contents
         , httpErrorView
         , inlineCode
         , italicText
+        , limitedLengthInput
+        , limitedLengthMultiline
         , plainImage
         , plainPara
         , underlinedNewTabLink
@@ -192,16 +194,28 @@ update msg model =
 
         OnUserRender ->
             ( model
-            , plainPutReq
-                (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "render" ] [])
-                (Http.jsonBody <|
-                    JEnc.object
-                        [ ( "noColonCase", JEnc.string model.noColonCaseInput )
-                        , ( "notEmojiCase", JEnc.string model.notEmojiCaseInput )
-                        , ( "isEmojiCase", JEnc.string model.isEmojiCaseInput )
-                        ]
-                )
-                (Http.expectJson GotRenderResp Elm.Make.resultParser)
+            , -- Check if any user input has exceeded max length.
+              if
+                String.length model.noColonCaseInput
+                    <= noColonCaseInputMaxLength
+                    && String.length model.notEmojiCaseInput
+                    <= notEmojiCaseInputMaxLength
+                    && String.length model.isEmojiCaseInput
+                    <= isEmojiCaseInputMaxLength
+              then
+                plainPutReq
+                    (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "render" ] [])
+                    (Http.jsonBody <|
+                        JEnc.object
+                            [ ( "noColonCase", JEnc.string model.noColonCaseInput )
+                            , ( "notEmojiCase", JEnc.string model.notEmojiCaseInput )
+                            , ( "isEmojiCase", JEnc.string model.isEmojiCaseInput )
+                            ]
+                    )
+                    (Http.expectJson GotRenderResp Elm.Make.resultParser)
+
+              else
+                Cmd.none
             )
 
         GotRenderResp result ->
@@ -564,7 +578,7 @@ replaceEmojis str =
                     Element.none
                 ]
             ]
-        , Input.text
+        , limitedLengthInput
             [ width fill ]
             { onChange = OnUserInputNoColonCase
             , text = model.noColonCaseInput
@@ -580,6 +594,7 @@ replaceEmojis str =
                         , text ":"
                         ]
             }
+            noColonCaseInputMaxLength
         , paragraph
             []
             [ text
@@ -587,22 +602,26 @@ replaceEmojis str =
                 If there is a colon pair, we get the indices of the first and second colon, and slice out the string between the colons. We'll be implementing the checking of whether that string is a valid emoji unicode later. Can you complete what should be appended in the not emoji case?
                 """
             ]
-        , Input.text
+        , limitedLengthInput
             [ width fill ]
             { onChange = OnUserInputNotEmojiCase
             , text = model.notEmojiCaseInput
             , placeholder = Nothing
             , label = Input.labelHidden ""
             }
+            notEmojiCaseInputMaxLength
         , plainPara "And what's to be concatenated in the \"Found an emoji\" case?"
-        , Input.multiline
-            [ width fill ]
+        , limitedLengthMultiline
+            [ width fill
+            , Font.family [ Font.monospace ]
+            ]
             { onChange = OnUserInputIsEmojiCase
             , text = model.isEmojiCaseInput
             , placeholder = Nothing
             , label = Input.labelHidden ""
             , spellcheck = False
             }
+            isEmojiCaseInputMaxLength
         , borderedButton OnUserRender "Compile and Run!"
         , case model.renderResult of
             Err httpError ->
@@ -702,6 +721,18 @@ indentMultiline numSpaces str =
         |> String.lines
         |> List.map indentLine
         |> String.join "\n"
+
+
+noColonCaseInputMaxLength =
+    39
+
+
+notEmojiCaseInputMaxLength =
+    99
+
+
+isEmojiCaseInputMaxLength =
+    119
 
 
 grinEmojiPath =

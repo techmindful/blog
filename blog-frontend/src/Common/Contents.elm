@@ -7,6 +7,8 @@ module Common.Contents exposing
     , httpErrorView
     , inlineCode
     , italicText
+    , limitedLengthInput
+    , limitedLengthMultiline
     , plainImage
     , plainPara
     , sizedText
@@ -33,6 +35,7 @@ import Element
         , paddingXY
         , paragraph
         , rgb255
+        , spacing
         , text
         , width
         )
@@ -183,6 +186,67 @@ plainImage src description =
         { src = src
         , description = description
         }
+
+
+limitedLengthInput :
+    List (Element.Attribute msg)
+    ->
+        { onChange : String -> msg
+        , text : String
+        , placeholder : Maybe (Input.Placeholder msg)
+        , label : Input.Label msg
+        }
+    -> Int
+    -> Element msg
+limitedLengthInput attrs r maxLength =
+    column
+        [ width fill
+        , spacing 10
+        ]
+        [ Input.text attrs r
+        , if String.length r.text > maxLength then
+            paragraph
+                [ Font.color red ]
+                [ text <|
+                    "Input length is limited at "
+                        ++ String.fromInt maxLength
+                        ++ " characters."
+                ]
+
+          else
+            Element.none
+        ]
+
+
+limitedLengthMultiline :
+    List (Element.Attribute msg)
+    ->
+        { onChange : String -> msg
+        , text : String
+        , placeholder : Maybe (Input.Placeholder msg)
+        , label : Input.Label msg
+        , spellcheck : Bool
+        }
+    -> Int
+    -> Element msg
+limitedLengthMultiline attrs r maxLength =
+    column
+        [ width fill
+        , spacing 10
+        ]
+        [ Input.multiline attrs r
+        , if String.length r.text > maxLength then
+            paragraph
+                [ Font.color red ]
+                [ text <|
+                    "Input length is limited at "
+                        ++ String.fromInt maxLength
+                        ++ " characters."
+                ]
+
+          else
+            Element.none
+        ]
 
 
 httpErrorView : Http.Error -> Element msg
