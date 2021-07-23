@@ -75,7 +75,6 @@ import Html
 import Html.Attributes as HtmlAttr
 import Http
 import Json.Encode as JEnc
-import Markdown
 import String.Extra as String
 import Url.Builder
 import Utils.Networking exposing (plainPutReq, utf8StringBody)
