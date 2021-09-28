@@ -134,8 +134,11 @@ borderedButton msg labelStr =
 inlineCode : String -> Element msg
 inlineCode str =
     el
-        [ Background.color codeGray ]
-        (text str)
+        [ Background.color codeGray
+        , Border.rounded 2
+        , paddingXY 4 1
+        ]
+        (sizedText 18 str)
 
 
 mkCodeBlock : Bool -> String -> Element msg
