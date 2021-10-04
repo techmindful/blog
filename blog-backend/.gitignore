@@ -6,4 +6,7 @@
 *.aes
 
 
+__pycache__/
+
+
 blog-backend-exe
