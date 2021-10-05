@@ -7,10 +7,9 @@ module Elm.Test
   ( ElmTestResp
   , MkUserFileError(..)
   , runElmTest
-  , tryMkUserFile
   ) where
 
-import           Elm.Files ( MkUserFileError(..), tryMkUserFile )
+import           Elm.Files ( MkUserFileError(..) )
 
 import           RIO hiding ( Handler )
 

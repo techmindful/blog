@@ -1,12 +1,14 @@
 .stack-work/
 *~
 
+blog-apis/**/user-creations/
+
+# TODO: Find better ways to backup static dirs without duplicating.
+blog-apis/**/template/static/
+
+blog-backend-exe
 
 # Don't upload keys!!
 *.aes
 
-
 __pycache__/
-
-
-blog-backend-exe

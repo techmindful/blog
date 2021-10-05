@@ -2,10 +2,11 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Elm.Files
   ( MkUserFileError(..)
-  , tryMkUserFile
+  , tryMkUserDir
   ) where
 
 
@@ -27,7 +28,7 @@ import           Path
   , toFilePath
   )
 import qualified Path
-import           Path.IO ( createDirIfMissing ) 
+import           Path.IO ( copyDirRecur ) 
 
 
 data MkUserFileError
@@ -39,7 +40,18 @@ instance Exception MkUserFileError
 
 
 {-|
-  Try to make a user file. Returns the file name, not path.
+  Try to make a user creation dir.
+
+  This function assumes the template dir is "template/",
+  and user dir is "user-creations/".
+
+  @root is the parent dir of "template/" and "user-creations/".
+
+  @templateModuleName is the target template module that user is modifying.
+
+  @return the dir name, which is effectively the random hash with type `Path Rel Dir`, after root.
+  This is because if caller wants to full path with @root,
+  they already have it as the param and can concat the two.
 
   Caller is responsible for providing a valid `Path Rel File` as `templateModuleName`,
   and let the function add an extension that's guaranteed to be valid, ".elm",
@@ -49,71 +61,55 @@ instance Exception MkUserFileError
   * MkUserFileError
   * File read/write errors.
 -}
-tryMkUserFile :: Path Rel Dir
+tryMkUserDir :: Path Rel Dir
               -> Path Rel File
-              -> Path Rel Dir
               -> ( Text -> Either MkUserFileError Text )
-              -> IO ( Path Rel File )
-tryMkUserFile templateDirPath templateModuleName userDirPath codeMod = do
+              -> IO ( Path Rel Dir )
+tryMkUserDir root templateModuleName codeMod = do
 
   withException
-    mkUserFile
+    mkUserDir
     ( \ ( e :: MkUserFileError ) -> do
         putStrLn $ "[ Exception ] "
                 ++ show e
-                ++ " occurred on tryMkUserFile."
+                ++ " occurred on tryMkUserDir."
 
-        putStrLn $ "templateDirPath: " ++ toFilePath templateDirPath
+        putStrLn $ "root: " ++ toFilePath root
         putStrLn $ "templateModuleName: " ++ toFilePath templateModuleName
-        putStrLn $ "userDirPath: " ++ toFilePath userDirPath
         putStrLn $ "With some codeMod."
     )
 
   where
-    mkUserFile = do
-
-      liftIO $ createDirIfMissing False userDirPath
+    mkUserDir = do
 
       let ext = ".elm"
 
-      let templateModuleNameText = Text.pack $ templateModuleName & toFilePath
+      let templateDirPath = root </> $(Path.mkRelDir "template/")
 
       -- Make template file info.
       --   We'll ignore the possibility of InvalidExtension exception here,
       --   Since we know ".elm" is a valid extension.
-      ( templateFileName :: Path Rel File ) <- Path.addExtension ext templateModuleName
-      let templateFilePath = templateDirPath </> templateFileName
+      ( templateFileFullName :: Path Rel File ) <- Path.addExtension ext templateModuleName
+      let templateFilePath =
+            templateDirPath </> $(Path.mkRelDir "src/") </> templateFileFullName
 
-      -- Make user file info.
+
+      -- Make user dir info.
       randomHash <- getRandomHash
-      let userModuleNameText =
-            Text.concat [ templateModuleNameText, "_", randomHash ]
-      -- Ignoring InvalidRelFile exception, since appending hash shouldn't cause path exceptions.
-      ( userModuleName :: Path Rel File ) <- Path.parseRelFile $ Text.unpack userModuleNameText 
-      -- Ignoring InvalidExtension exception just like above with the template.
-      userFileName <- Path.addExtension ext userModuleName
-      let userFilePath = userDirPath </> userFileName
+      -- Ignoring InvalidRelDir exception, since a hash should be valid dir name.
+      userDirName <- Path.parseRelDir $ Text.unpack randomHash
+      let userDirPath =
+            root </> $(Path.mkRelDir "user-creations/")
+                 </> userDirName
 
-      let fixModuleLine :: Text -> Either MkUserFileError Text
-          fixModuleLine codeText = do 
-
-            case Text.lines codeText of
-              [] -> Left EmptyModdedCode
-
-              ( moduleLine : rest ) ->
-                  let
-                    newModuleLine =
-                      Text.unwords $ map
-                        ( \word ->
-                            if word == templateModuleNameText then userModuleNameText
-                            else word
-                        )
-                        ( Text.words moduleLine )
-                  in
-                  Right $ Text.unlines $ newModuleLine : rest
+      copyDirRecur templateDirPath userDirPath
+            
+      -- User file is the user's module created by modifying template module.
+      let userFilePath =
+            userDirPath </> $(Path.mkRelDir "src/") </> templateFileFullName
 
 
-      templateCodeByteStr <- readFile $ templateFilePath & toFilePath
+      templateCodeByteStr <- readFile $ toFilePath templateFilePath
 
       let resultUserCode :: Either MkUserFileError Text
           resultUserCode = do
@@ -123,11 +119,10 @@ tryMkUserFile templateDirPath templateModuleName userDirPath codeMod = do
                    ( decodeUtf8' templateCodeByteStr )
 
             moddedCode <- codeMod templateCode
-            fixedCode  <- fixModuleLine moddedCode
-            pure fixedCode
+            pure moddedCode
 
       case resultUserCode of
         Left mkUserCodeError -> throwIO $ mkUserCodeError
         Right userCode -> do
-          writeFile ( userFilePath & toFilePath ) ( encodeUtf8 userCode )
-          pure userFileName
+          writeFile ( toFilePath userFilePath ) ( encodeUtf8 userCode )
+          pure userDirName

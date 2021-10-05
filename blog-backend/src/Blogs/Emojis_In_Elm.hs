@@ -15,7 +15,7 @@ module Blogs.Emojis_In_Elm
   where
 
 import           Types ( AppM )
-import           Elm.Files ( tryMkUserFile )
+import           Elm.Files ( tryMkUserDir )
 import qualified Elm.Make
 import           Elm.Test
   ( ElmTestResp
@@ -73,16 +73,8 @@ server =
   unicodeToPathHandler :<|> renderHandler
 
 
-elmRoot :: Path Rel Dir
-elmRoot = $(Path.mkRelDir "blog-apis/emojis-in-elm/")
-
-
-templatesDirPath :: Path Rel Dir
-templatesDirPath = elmRoot </> $(Path.mkRelDir "src-templates/")
-
-
-elmRooted_UsersDirPath :: Path Rel Dir
-elmRooted_UsersDirPath = $(Path.mkRelDir "src-users/")
+blogRoot :: Path Rel Dir
+blogRoot = $(Path.mkRelDir "blog-apis/emojis-in-elm/")
 
 
 unicodeToPathHandler :: Text -> AppM ElmTestResp
@@ -93,21 +85,25 @@ unicodeToPathHandler userCode = do
 
   else do
 
+    let root = blogRoot </> $(Path.mkRelDir "unicode-to-path")
     let templateModuleName = $(Path.mkRelFile "UnicodeToPath")
+    let userCreationsPath = root </> $(Path.mkRelDir "user-creations/")
 
     let codeMod :: Text -> Either MkUserFileError Text
         codeMod templateCode = do
           ( withoutEndNewline, _ ) <- note EmptyTemplate $ unsnoc templateCode
           pure $ withoutEndNewline <> userCode
 
-    userFileName  <-
-      liftIO $ tryMkUserFile
-        templatesDirPath
+    userDirName <- liftIO $
+      tryMkUserDir
+        root
         templateModuleName
-        ( elmRoot </> elmRooted_UsersDirPath )
         codeMod
 
-    elmTestResult <- liftIO $ runElmTest elmRoot $ elmRooted_UsersDirPath </> userFileName
+    userFileFullName <- Path.addExtension ".elm" templateModuleName
+    let userDirPath = userCreationsPath </> userDirName
+
+    elmTestResult <- liftIO $ runElmTest userDirPath $ $(Path.mkRelDir "src/") </> userFileFullName
 
     liftIO $ putStrLn $ show elmTestResult
 
@@ -133,7 +129,9 @@ renderHandler userCode = do
 
   else liftIO $ do
 
+    let root = blogRoot </> $(Path.mkRelDir "render/")
     let templateModuleName = $(Path.mkRelFile "Render")
+    let userCreationsPath = root </> $(Path.mkRelDir "user-creations/")
 
     let codeMod :: Text -> Either MkUserFileError Text
         codeMod templateCode = do
@@ -180,24 +178,33 @@ renderHandler userCode = do
                        & pure
 
 
-    userElmFileName <-
-      tryMkUserFile templatesDirPath templateModuleName ( elmRoot </> elmRooted_UsersDirPath ) codeMod
+    -- Path is after root.
+    userDirName <-
+      tryMkUserDir
+        root
+        templateModuleName
+        codeMod
 
-    userHtmlFileName <-  -- Not catching InvalidExtension since ".html" should be valid.
-      Path.addExtension ".html" userElmFileName
+    let userDirPath = userCreationsPath </> userDirName
 
-    let elmRooted_UserHtmlFilePath = elmRooted_UsersDirPath </> userHtmlFileName
+    userElmPath <-
+      Path.addExtension ".elm" $
+        userDirPath
+          </> $(Path.mkRelDir "src/")
+          </> templateModuleName
+    
+    let userHtmlPath = userDirPath </> $(Path.mkRelFile "index.html")
 
     ( _, _, Just herr, elmMakeProcHandle ) <- createProcess
       ( proc "elm"
           [ "make"
-          , toFilePath $ elmRooted_UsersDirPath </> userElmFileName
+          , toFilePath userElmPath
           , "--optimize"
-          , "--output=" ++ ( elmRooted_UserHtmlFilePath & toFilePath )
+          , "--output=" ++ toFilePath userHtmlPath
           ]
       )
       { std_err = CreatePipe
-      , Proc.cwd = Just $ elmRoot & toFilePath
+      , Proc.cwd = Just $ toFilePath userDirPath
       }
 
     err <- hGetContents herr
@@ -207,6 +214,6 @@ renderHandler userCode = do
     if not $ ByteStr.null err then
       pure $ Elm.Make.CompilerError $ decodeUtf8With lenientDecode err
     else do
-      html <- readFile $ toFilePath $ elmRoot </> elmRooted_UserHtmlFilePath
+      html <- readFile $ toFilePath userHtmlPath
       pure $ Elm.Make.Html $ decodeUtf8With lenientDecode html
 
