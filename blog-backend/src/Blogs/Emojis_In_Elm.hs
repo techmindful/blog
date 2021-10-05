@@ -178,7 +178,6 @@ renderHandler userCode = do
                        & pure
 
 
-    -- Path is after root.
     userDirName <-
       tryMkUserDir
         root
@@ -187,20 +186,16 @@ renderHandler userCode = do
 
     let userDirPath = userCreationsPath </> userDirName
 
-    userElmPath <-
+    userElmPath_AfterRoot <-
       Path.addExtension ".elm" $
-        userDirPath
-          </> $(Path.mkRelDir "src/")
-          </> templateModuleName
+          $(Path.mkRelDir "src/") </> templateModuleName
     
-    let userHtmlPath = userDirPath </> $(Path.mkRelFile "index.html")
-
     ( _, _, Just herr, elmMakeProcHandle ) <- createProcess
       ( proc "elm"
           [ "make"
-          , toFilePath userElmPath
+          , toFilePath userElmPath_AfterRoot
           , "--optimize"
-          , "--output=" ++ toFilePath userHtmlPath
+          , "--output=index.html"
           ]
       )
       { std_err = CreatePipe
@@ -214,6 +209,7 @@ renderHandler userCode = do
     if not $ ByteStr.null err then
       pure $ Elm.Make.CompilerError $ decodeUtf8With lenientDecode err
     else do
+      let userHtmlPath = userDirPath </> $(Path.mkRelFile "index.html")
       html <- readFile $ toFilePath userHtmlPath
       pure $ Elm.Make.Html $ decodeUtf8With lenientDecode html
 

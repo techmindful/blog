@@ -4,3 +4,5 @@ stack install --pedantic
 echo ">>>Copying app here..."
 mv ~/.local/bin/blog-backend-exe .
 
+echo ">>>Built!"
+
