@@ -87,23 +87,13 @@ unicodeToPathHandler userCode = do
 
     let root = blogRoot </> $(Path.mkRelDir "unicode-to-path")
     let templateModuleName = $(Path.mkRelFile "UnicodeToPath")
-    let userCreationsPath = root </> $(Path.mkRelDir "user-creations/")
 
     let codeMod :: Text -> Either MkUserFileError Text
         codeMod templateCode = do
           ( withoutEndNewline, _ ) <- note EmptyTemplate $ unsnoc templateCode
           pure $ withoutEndNewline <> userCode
 
-    userDirName <- liftIO $
-      tryMkUserDir
-        root
-        templateModuleName
-        codeMod
-
-    userFileFullName <- Path.addExtension ".elm" templateModuleName
-    let userDirPath = userCreationsPath </> userDirName
-
-    elmTestResult <- liftIO $ runElmTest userDirPath $ $(Path.mkRelDir "src/") </> userFileFullName
+    elmTestResult <- liftIO $ runElmTest root templateModuleName codeMod
 
     liftIO $ putStrLn $ show elmTestResult
 

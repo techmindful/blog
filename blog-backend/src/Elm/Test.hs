@@ -2,6 +2,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Elm.Test
   ( ElmTestResp
@@ -9,7 +10,7 @@ module Elm.Test
   , runElmTest
   ) where
 
-import           Elm.Files ( MkUserFileError(..) )
+import           Elm.Files ( MkUserFileError(..), tryMkUserDir )
 
 import           RIO hiding ( Handler )
 
@@ -32,7 +33,10 @@ import           Path
   , Dir
   , File
   , Path
+  , addExtension
+  , mkRelDir
   , toFilePath
+  , (</>)
   )
 import           System.Process as Proc
   ( CreateProcess(..)
@@ -126,14 +130,34 @@ instance FromJSON ElmTestJson_Failure_Reason_Data
 --   on elm file at `elmFilePath`.
 runElmTest :: Path Rel Dir
            -> Path Rel File
+           -> ( Text -> Either MkUserFileError Text )
            -> IO ElmTestResp
-runElmTest elmDirRoot elmFilePath = do
+runElmTest root templateModuleName codeMod = do
 
+  -- Create user dir.
+  userDirName <- liftIO $
+    tryMkUserDir
+      root
+      templateModuleName
+      codeMod
+
+  -- Get the paths.
+  userFileFullName <- Path.addExtension ".elm" templateModuleName
+  let userDirPath =
+        root </> $(Path.mkRelDir "user-creations/")
+             </> userDirName
+
+  -- Run elm-test.
   ( _, Just hout, Just herr, _ ) <- liftIO $ createProcess
-    ( proc "elm-test" [ elmFilePath & toFilePath, "--report", "json", "--fuzz", "1" ] )
+    ( proc
+        "elm-test"
+        [ toFilePath $ $(Path.mkRelDir "src/") </> userFileFullName
+        , "--report", "json", "--fuzz", "1"
+        ]
+    )
     { std_out = CreatePipe
     , std_err = CreatePipe
-    , Proc.cwd = Just $ toFilePath elmDirRoot
+    , Proc.cwd = Just $ toFilePath userDirPath
     }
 
   -- If compiling succeeds, stdout gives test events in jsons.
