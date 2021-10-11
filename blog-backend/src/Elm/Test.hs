@@ -38,6 +38,7 @@ import           Path
   , toFilePath
   , (</>)
   )
+import           Path.IO ( removeDirRecur )
 import           System.Process as Proc
   ( CreateProcess(..)
   , StdStream(..)
@@ -165,27 +166,34 @@ runElmTest root templateModuleName codeMod = do
   -- If compiling fails, stderr gives compiler errors.
   err <- hGetContents herr
 
-  -- Compile fails
-  if not $ ByteStr.null err then
-    pure $ CompileFailure $ decodeUtf8With lenientDecode err
-  -- Compile succeeds.
-  else do
-    -- Filter out test events unrelated to the result.
-    let  decodedJsons :: [ ElmTestJson ]
-         decodedJsons = mapMaybe Aeson.decodeStrict $ ByteStrC8.lines out
+  let elmTestResp :: ElmTestResp
+      elmTestResp =
+        -- Compile fails
+        if not $ ByteStr.null err then
+          CompileFailure $ decodeUtf8With lenientDecode err
+        -- Compile succeeds.
+        else do
+          -- Filter out test events unrelated to the result.
+          let  decodedJsons :: [ ElmTestJson ]
+               decodedJsons = mapMaybe Aeson.decodeStrict $ ByteStrC8.lines out
 
-    case decodedJsons of
-      [] ->
-        pure InternalJsonError
+          case decodedJsons of
+            [] ->
+              InternalJsonError
 
-      elmTestJsons -> do
-        
-        let maybeResults = map elmTestJsonToResult elmTestJsons
+            elmTestJsons -> do
+              
+              let maybeResults = map elmTestJsonToResult elmTestJsons
 
-        if any isNothing maybeResults then
-          pure InternalJsonError
-        else
-          pure $ GotResults $ catMaybes maybeResults
+              if any isNothing maybeResults then
+                InternalJsonError
+              else
+                GotResults $ catMaybes maybeResults
+
+  -- Clean up.
+  removeDirRecur userDirPath
+
+  pure elmTestResp
 
  
 elmTestJsonToResult :: ElmTestJson -> Maybe ElmTestResult
