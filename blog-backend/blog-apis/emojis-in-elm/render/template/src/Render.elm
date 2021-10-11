@@ -45,14 +45,8 @@ replaceEmojis str =
         Nothing ->
             -- Insert noColonCase here.
 
-        Just pair ->
+        Just ( firstColonIndex, secondColonIndex ) ->
             let
-                firstColonIndex =
-                    Tuple.first pair
-
-                secondColonIndex =
-                    Tuple.second pair
-
                 possibleEmojiName =
                     String.slice (firstColonIndex + 1) secondColonIndex str
 

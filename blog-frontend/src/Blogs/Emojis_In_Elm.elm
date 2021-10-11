@@ -475,14 +475,8 @@ replaceEmojis str =
                 ++ userFillableCode_ model.noColonCaseInput
                 ++ """
 
-        Just pair ->
+        Just ( firstColonIndex, secondColonIndex )  ->
             let
-                firstColonIndex =
-                    Tuple.first pair
-
-                secondColonIndex =
-                    Tuple.second pair
-
                 possibleEmojiName =
                     String.slice (firstColonIndex + 1) secondColonIndex str
 

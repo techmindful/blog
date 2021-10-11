@@ -38,7 +38,7 @@ class User(HttpUser):
 
         with request as response:
             if response.status_code != 200:
-                response.failure("Non 200 status code." )
+                response.failure("Non 200 status code.")
 
             if isinstance(response.json(), dict):
                 if response.json().get("compilerError") != None:
@@ -117,4 +117,33 @@ class User(HttpUser):
                         "Given correct code, response has wrong number of passed cases: " + \
                         str(numPass)
                     )
+
+    @task(10)
+    def render_1(self):
+        request = self.client.put(
+            "/blog-apis/emojis-in-elm/render",
+            json = {
+                "noColonCase": "1",
+                "notEmojiCase": "2",
+                "isEmojiCase": "3",
+            },
+            headers = { "content-type": "application/json" },
+            catch_response = True,
+        )
+
+        with request as response:
+            if response.status_code != 200:
+                response.failure("Non 200 status code: " + str(response.status_code))
+
+            if not isinstance(response.json(), dict):
+                response.failure("Response is not json dict.")
+
+            compiler_error = response.json().get("compilerError")
+            if compiler_error != None:
+                if "TYPE MISMATCH" not in compiler_error:
+                    response.failure("Incorrect compiler error message: " + compiler_error)
+            else:
+                response.failure(
+                    "Code should not compile, but response json has no \"compilerError\" key."
+                )
 
