@@ -336,7 +336,9 @@ unicodeToPath unicode =
                     ++ model.unicodeToPathInput
         , limitedLengthInput
             unicodeToPathInputMaxLength
-            [ width fill ]
+            [ width fill
+            , Font.family [ Font.monospace ]
+            ]
             { onChange = OnUserInputUnicodeToPath
             , text = model.unicodeToPathInput
             , placeholder = Nothing
@@ -545,7 +547,9 @@ replaceEmojis str =
                 ]
                 [ withCorrectMark isFirstColonPairInputCorrect_Maybe <|
                     Input.text
-                        [ width <| Element.px 150 ]
+                        [ width <| Element.px 150
+                        , Font.family [ Font.monospace ]
+                        ]
                         { onChange = OnUserInputFirstColonPair_Maybe
                         , text = model.firstColonPairInput_Maybe
                         , placeholder = Nothing
@@ -563,7 +567,9 @@ replaceEmojis str =
                 ]
                 [ withCorrectMark isFirstColonPairInputCorrect_Tuple <|
                     Input.text
-                        [ width <| Element.px 150 ]
+                        [ width <| Element.px 150
+                        , Font.family [ Font.monospace ]
+                        ]
                         { onChange = OnUserInputFirstColonPair_Tuple
                         , text = model.firstColonPairInput_Tuple
                         , placeholder = Nothing
@@ -576,22 +582,23 @@ replaceEmojis str =
                     Element.none
                 ]
             ]
+        , paragraph
+            []
+            [ text "Complete the case where "
+            , inlineCode "firstColonPair"
+            , text " is "
+            , inlineCode "Nothing"
+            , text ":"
+            ]
         , limitedLengthInput
             noColonCaseInputMaxLength
-            [ width fill ]
+            [ width fill
+            , Font.family [ Font.monospace ]
+            ]
             { onChange = OnUserInputNoColonCase
             , text = model.noColonCaseInput
             , placeholder = Nothing
-            , label =
-                Input.labelAbove [ paddingEach { edges | bottom = 5 } ] <|
-                    paragraph
-                        []
-                        [ text "Complete the case where "
-                        , inlineCode "firstColonPair"
-                        , text " is "
-                        , inlineCode "Nothing"
-                        , text ":"
-                        ]
+            , label = Input.labelHidden ""
             }
         , paragraph
             []
@@ -602,7 +609,9 @@ replaceEmojis str =
             ]
         , limitedLengthInput
             notEmojiCaseInputMaxLength
-            [ width fill ]
+            [ width fill
+            , Font.family [ Font.monospace ]
+            ]
             { onChange = OnUserInputNotEmojiCase
             , text = model.notEmojiCaseInput
             , placeholder = Nothing
