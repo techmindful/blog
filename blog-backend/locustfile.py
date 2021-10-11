@@ -43,7 +43,8 @@ class User(HttpUser):
             if isinstance(response.json(), dict):
                 if response.json().get("compilerError") != None:
                     response.failure(
-                        "Code should compiles, but compiler throws error: " + compiler_error
+                        "Code is incorrect but should compiles, but compiler throws error: " + \
+                        compiler_error
                     )
                 else:
                     response.failure(
@@ -77,4 +78,43 @@ class User(HttpUser):
                 else:
                     if not (numPass == 1 and numFail == 2):
                         response.failure("Response has wrong number of pass/fail cases.")
+
+    @task
+    def unicode_to_path_3(self):
+        request = self.client.put(
+            "/blog-apis/emojis-in-elm/unicode-to-path",
+            data = "\"/static/noto-emoji/32/emoji_u\" ++ unicode ++ \".png\"",
+            headers = common_headers,
+            catch_response = True,
+        )
+
+        with request as response:
+            if response.status_code != 200:
+                response.failure("Non 200 status code." )
+
+            if isinstance(response.json(), dict):
+                if response.json().get("compilerError") != None:
+                    response.failure(
+                        "Given correct code, compiler throws error: " + compiler_error
+                    )
+                else:
+                    response.failure(
+                        "Unexpected response. response.json() is dict, but has no \"compilerError\" key."
+                    )
+
+            elif isinstance(response.json(), list):
+                if len(response.json()) != 3:
+                    response.failure("response.json() is of unexpected length " + len(response.json()))
+                    return
+
+                numPass = 0
+                for o in response.json():
+                    if o.get("pass") == True:
+                        numPass += 1
+
+                if numPass != 3:
+                    response.failure(
+                        "Given correct code, response has wrong number of passed cases: " + \
+                        str(numPass)
+                    )
 
