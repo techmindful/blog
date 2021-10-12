@@ -634,6 +634,7 @@ replaceEmojis str =
         , limitedLengthMultiline
             isEmojiCaseInputMaxLength
             [ width fill
+            , height <| Element.minimum 98 fill
             , Font.family [ Font.monospace ]
             ]
             { onChange = OnUserInputIsEmojiCase
