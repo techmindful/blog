@@ -288,11 +288,9 @@ view model =
             , text """. To get the emoji images, I had to download the entire repo. Then I went into the png folder, where emoji images of various sizes reside. I copied the folder of 32x32 version into a new folder I made under my project: 
                 """
             , inlineCode "static/noto-emoji/32/"
-            , text ". I also copied the LICENSE file and put it under "
-            , inlineCode "static/noto-emoji/"
-            , text """, to fulfill the licensing obligations. Alternatively, OpenMoji looks like a great option too: """
+            , text """. Alternatively, OpenMoji looks like a great option too: """
             , underlinedNewTabLink_ "https://github.com/hfg-gmuend/openmoji"
-            , text ". This guide should be still applicable if you choose another vendor."
+            , text ". This guide should be still applicable if you choose another vendor. Please comply with the licensing and copyright requirements, whichever vendor you choose."
             ]
         , paragraph
             []
