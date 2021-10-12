@@ -88,10 +88,9 @@ errorView compilerErrorStr =
                     [ text compilerError.errorType
                     , Element.html <|
                         Html.p
-                            --[ HtmlAttr.style "white-space" "pre-wrap"
-                            --, HtmlAttr.style "overflow-wrap" "anywhere"
-                            --]
-                            []
+                            [ HtmlAttr.style "white-space" "pre-wrap"
+                            , HtmlAttr.style "overflow-wrap" "anywhere"
+                            ]
                             [ Html.text compilerError.errorMsg ]
                     ]
         ]
