@@ -262,13 +262,11 @@ view model =
             [ text "When I was building "
             , underlinedNewTabLink "https://github.com/techmindful/hideout" "Hideout"
             , text
-                """, a private chat service, I figured it'd be really helpful to add an emoji feature.
-                """
-            , underlinedNewTabLink
-                "https://www.youtube.com/watch?v=naleynXS7yo"
-                "Texting can often cause misunderstanding"
+                """, a private chat service, I figured it'd be really helpful to add an emoji feature. Texting can often cause misunderstanding"""
+            , text " (proved by Key & Peele's "
+            , underlinedNewTabLink "https://youtu.be/sngRrkQayDA" "skit on youtube"
             , text
-                """, and adding a few emojis here and there greatly helps clarify people's intent.
+                """), and adding a few emojis here and there greatly helps clarify people's intent.
                 """
             ]
         , paragraph
