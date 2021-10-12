@@ -9,7 +9,7 @@ class User(HttpUser):
 
     wait_time = between(1, 5)
 
-    @task
+    @task(1)
     def unicode_to_path_1(self):
         request = self.client.put(
             "/blog-apis/emojis-in-elm/unicode-to-path",
@@ -19,15 +19,15 @@ class User(HttpUser):
         )
 
         with request as response:
-            if response.status_code != 200:
-                response.failure("Non 200 status code." )
+
+            check_200(response)
 
             # TODO: Handle JSON error.
             compiler_msg = response.json()["compilerError"]
             if "TYPE MISMATCH" not in compiler_msg:  
                 response.failure("Wrong compiler error message: " + compiler_msg )
 
-    @task
+    @task(1)
     def unicode_to_path_2(self):
         request = self.client.put(
             "/blog-apis/emojis-in-elm/unicode-to-path",
@@ -37,8 +37,8 @@ class User(HttpUser):
         )
 
         with request as response:
-            if response.status_code != 200:
-                response.failure("Non 200 status code.")
+
+            check_200(response)
 
             if isinstance(response.json(), dict):
                 if response.json().get("compilerError") != None:
@@ -79,7 +79,7 @@ class User(HttpUser):
                     if not (numPass == 1 and numFail == 2):
                         response.failure("Response has wrong number of pass/fail cases.")
 
-    @task
+    @task(1)
     def unicode_to_path_3(self):
         request = self.client.put(
             "/blog-apis/emojis-in-elm/unicode-to-path",
@@ -89,8 +89,8 @@ class User(HttpUser):
         )
 
         with request as response:
-            if response.status_code != 200:
-                response.failure("Non 200 status code." )
+
+            check_200(response)
 
             if isinstance(response.json(), dict):
                 if response.json().get("compilerError") != None:
@@ -118,7 +118,7 @@ class User(HttpUser):
                         str(numPass)
                     )
 
-    @task(10)
+    @task(1)
     def render_1(self):
         request = self.client.put(
             "/blog-apis/emojis-in-elm/render",
@@ -132,8 +132,8 @@ class User(HttpUser):
         )
 
         with request as response:
-            if response.status_code != 200:
-                response.failure("Non 200 status code: " + str(response.status_code))
+
+            check_200(response)
 
             if not isinstance(response.json(), dict):
                 response.failure("Response is not json dict.")
@@ -146,4 +146,94 @@ class User(HttpUser):
                 response.failure(
                     "Code should not compile, but response json has no \"compilerError\" key."
                 )
+
+    @task(1)
+    def render_2(self):
+        request = self.client.put(
+            "/blog-apis/emojis-in-elm/render",
+            json = {
+                "noColonCase": "[]",
+                "notEmojiCase": "[]",
+                "isEmojiCase": "[]",
+            },
+            headers = { "content-type": "application/json" },
+            catch_response = True,
+        )
+
+        with request as response:
+
+            check_200(response)
+
+            if not isinstance(response.json(), dict):
+                response.failure("Response is not json dict.")
+
+            html = response.json().get("html")
+            if html != None:
+                # User's code should all render nothing,
+                # so these substrings should only show up once,
+                # after the "Target string -".
+                # Other strings are omitted.
+                if not html.count("No colon in this sentence.") == 1 and \
+                       html.count("One colon : here.") == 1 and \
+                       html.count("One colon at the end:") == 1:
+                    response.failure("Returned html has unexpected number of various substrings.")
+            else:
+                resp_json_str = ""
+                for k, v in response.json().items():
+                    resp_json_str += str(k) + ": " + str(v) + ", "
+                response.failure(
+                    "Code should have compiled and html should be returned, but response json has no \
+                    \"html\" key. response json is: " + resp_json_str
+                )
+
+    @task(1)
+    def render_3(self):
+        request = self.client.put(
+            "/blog-apis/emojis-in-elm/render",
+            json = {
+                "noColonCase": "[ Text str ]",
+                "notEmojiCase": "(replaceEmojis <| String.dropLeft secondColonIndex str)",
+                "isEmojiCase":
+                    "[ Text <| String.left firstColonIndex str\n, Emoji possibleEmojiName\n]"
+            },
+            headers = { "content-type": "application/json" },
+            catch_response = True,
+        )
+
+        with request as response:
+
+            check_200(response)
+
+            check_dict(response)
+
+            html = response.json().get("html")
+            if html != None:
+                # User's code should all render correctly,
+                # so these substrings should all show up twice,
+                # once as target string and once as actual result.
+                # Other strings are omitted.
+                if not html.count("No colon in this sentence.") == 2 and \
+                       html.count("One colon : here.") == 2 and \
+                       html.count("One colon at the end:") == 2:
+                    response.failure("Code is correct, but \
+                        returned html has unexpected number of various substrings."
+                    )
+            else:
+                resp_json_str = ""
+                for k, v in response.json().items():
+                    resp_json_str += str(k) + ": " + str(v) + ", "
+                response.failure(
+                    "Code is correct and html should be returned, but response json has no \
+                    \"html\" key. response json is: " + resp_json_str
+                )
+
+
+def check_200(response):
+    if response.status_code != 200:
+        response.failure("Non 200 status code: " + str(response.status_code))
+
+
+def check_dict(response):
+    if not isinstance(response.json(), dict):
+        response.failure("Response is not json dict.")
 
