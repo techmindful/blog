@@ -22,6 +22,7 @@ import Element
         , width
         )
 import Element.Border as Border
+import Element.Font as Font
 import Elm.Shared exposing (title)
 import Html
 import Html.Attributes as HtmlAttr
@@ -65,6 +66,7 @@ errorView compilerErrorStr =
     column
         [ width fill
         , spacing 15
+        , Font.family [ Font.monospace ]
         ]
         [ title "Compiler Error"
         , case Parser.run compilerErrorParser compilerErrorStr of
@@ -75,22 +77,13 @@ errorView compilerErrorStr =
                 column
                     [ spacing 20 ]
                     [ text compilerError.errorType
-                    , column
-                        [ width fill
-                        , spacing 10
-                        ]
-                      <|
-                        List.map
-                            (\str ->
-                                paragraph
-                                    [ Element.htmlAttribute <|
-                                        HtmlAttr.style "white-space" "pre-wrap"
-                                    , Element.htmlAttribute <|
-                                        HtmlAttr.style "overflow-wrap" "anywhere"
-                                    ]
-                                    [ text str ]
-                            )
-                            (String.split "\n" compilerError.errorMsg)
+                    , Element.html <|
+                        Html.p
+                            --[ HtmlAttr.style "white-space" "pre-wrap"
+                            --, HtmlAttr.style "overflow-wrap" "anywhere"
+                            --]
+                            []
+                            [ Html.text compilerError.errorMsg ]
                     ]
         ]
 
