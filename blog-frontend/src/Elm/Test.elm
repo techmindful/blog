@@ -8,6 +8,11 @@ module Elm.Test exposing
     , noRespView_
     )
 
+import Common.Colors
+    exposing
+        ( green
+        , red
+        )
 import Common.Contents
     exposing
         ( plainPara
@@ -27,6 +32,7 @@ import Element
         , width
         )
 import Element.Border as Border
+import Element.Font as Font
 import Elm.Compiler
 import Elm.Shared exposing (title)
 import Html
@@ -129,12 +135,17 @@ elmTestResultsView results allExpected failedCaseView passedCaseView =
     in
     column
         [ width fill ]
-        [ title <|
+        [ el
+            [ Border.widthEach { bottom = 2, top = 0, left = 0, right = 0 }
+            , paddingEach { bottom = 5, top = 0, left = 0, right = 0 }
+            , width fill
+            ]
+          <|
             if areAllResultsPassed results then
-                "Test Passed"
+                el [ Font.color green ] <| sizedText 24 "Test Passed"
 
             else
-                "Test Failed"
+                el [ Font.color red ] <| sizedText 24 "Test Failed"
         , column
             [ paddingEach { top = 15, bottom = 0, left = 0, right = 0 }
             , spacing 20

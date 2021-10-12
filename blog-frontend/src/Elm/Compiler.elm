@@ -3,6 +3,7 @@ module Elm.Compiler exposing
     , errorView
     )
 
+import Common.Colors exposing (red)
 import Common.Contents
     exposing
         ( plainPara
@@ -68,7 +69,15 @@ errorView compilerErrorStr =
         , spacing 15
         , Font.family [ Font.monospace ]
         ]
-        [ title "Compiler Error"
+        [ el
+            [ Border.widthEach { bottom = 2, top = 0, left = 0, right = 0 }
+            , paddingEach { bottom = 5, top = 0, left = 0, right = 0 }
+            , width fill
+            ]
+            (el
+                [ Font.color red, Font.size 24 ]
+                (text "Compiler Error")
+            )
         , case Parser.run compilerErrorParser compilerErrorStr of
             Err _ ->
                 plainPara "Error: Can't parse compiler error."
