@@ -53,6 +53,7 @@ import           Path
   , toFilePath
   )
 import qualified Path
+import           Path.IO ( removeDirRecur )
 import           System.Process as Proc
   ( CreateProcess(..)
   , StdStream(..)
@@ -192,14 +193,20 @@ renderHandler userCode = do
       , Proc.cwd = Just $ toFilePath userDirPath
       }
 
-    err <- hGetContents herr
-
     _ <- waitForProcess elmMakeProcHandle
 
-    if not $ ByteStr.null err then
-      pure $ Elm.Make.CompilerError $ decodeUtf8With lenientDecode err
-    else do
-      let userHtmlPath = userDirPath </> $(Path.mkRelFile "index.html")
-      html <- readFile $ toFilePath userHtmlPath
-      pure $ Elm.Make.Html $ decodeUtf8With lenientDecode html
+    err <- hGetContents herr
+
+    elmMakeResult <- do
+      if not $ ByteStr.null err then
+        pure $ Elm.Make.CompilerError $ decodeUtf8With lenientDecode err
+      else do
+        let userHtmlPath = userDirPath </> $(Path.mkRelFile "index.html")
+        html <- readFile $ toFilePath userHtmlPath
+        pure $ Elm.Make.Html $ decodeUtf8With lenientDecode html
+
+    -- Clean up.
+    removeDirRecur userDirPath
+
+    pure elmMakeResult
 
