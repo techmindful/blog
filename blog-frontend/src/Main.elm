@@ -10,12 +10,15 @@ import Common.Styles exposing (..)
 import Element
     exposing
         ( Element
+        , alignBottom
+        , alignRight
         , centerX
         , column
         , el
         , fill
         , onLeft
         , padding
+        , paddingEach
         , paddingXY
         , paragraph
         , row
@@ -133,13 +136,26 @@ banner =
         , Background.color black
         ]
         (column
-            [ paddingXY 40 32
-            , spacing 20
+            [ width fill
+            , paddingXY 50 32
+            , spacing 12
             , Font.size 32
             , Font.color white
             ]
             [ text "Technical"
-            , text "Mindfulness"
+            , row
+                [ width fill ]
+                [ text "Mindfulness"
+                , el
+                    [ alignRight
+                    , paddingEach { edges | top = 4, right = 60 }
+                    , Font.italic
+                    , Font.size 18
+                    , Font.family
+                        [ Font.serif ]
+                    ]
+                    (text "—  Know what you are doing.")
+                ]
             ]
         )
 

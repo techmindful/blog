@@ -3,6 +3,7 @@ module Common.Styles exposing (..)
 import Element
     exposing
         ( padding
+        , paddingXY
         , spacingXY
         )
 import Element.Border as Border
@@ -16,7 +17,7 @@ linkStyle =
 
 blogViewPadding : Element.Attribute msg
 blogViewPadding =
-    padding 20
+    paddingXY 20 40
 
 
 paraSpacing : Element.Attribute msg

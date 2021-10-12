@@ -8,7 +8,12 @@ module Blogs.Emojis_In_Elm exposing
     )
 
 import Blogs.Common.Contents exposing (userFillableCode_)
-import Common.Colors exposing (codeGray, red)
+import Common.Colors
+    exposing
+        ( blue
+        , codeGray
+        , red
+        )
 import Common.Contents
     exposing
         ( boldText
@@ -244,6 +249,14 @@ view model =
         [ paragraph
             [ Font.size 32 ]
             [ text title ]
+        , paragraph
+            [ Border.width 2
+            , padding 15
+            , Background.color blue
+            , Font.size 18
+            ]
+            [ text "Before you continue: Implementing emojis in Elm is very fun! I encourage you to try it yourself first, unless you are out of idea or in a hurry. You may find new ways of implementations!"
+            ]
         , paragraph
             []
             [ text "When I was building "
