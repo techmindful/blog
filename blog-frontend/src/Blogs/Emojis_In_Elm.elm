@@ -490,25 +490,7 @@ unicodeToPath unicode =
             []
             [ text
                 """
-                Turns out it isn't hard to write a recursive algorithm for this. The function first tries to locate a pair of colons in the input string. If it can't find at least 2 colons, that means there definitely isn't any emoji in the string, and the whole string should just be parsed as 
-                """
-            , inlineCode "Text"
-            , text
-                """. If it finds two colons, it slices out the substring in-between, and checks if it's an emoji unicode. If it is not, then everything before the second colon should be parsed as 
-                """
-            , inlineCode "Text"
-            , text
-                """. Be careful not to include the second colon here. It could be a part of a following emoji! And if the substring between colon is an emoji unicode, then everything before the 
-                """
-            , italicText "first"
-            , text " colon should be parsed as "
-            , inlineCode "Text"
-            , text ", the unicode and the surrounding colons should be parsed as "
-            , inlineCode "Emoji"
-            , text ". In both cases, the rest of the string will be parsed into a list of "
-            , inlineCode "Piece"
-            , text
-                """s by a recursive call to the function itself. The result is the whole thing concatenated.
+                Turns out it isn't hard to write a recursive algorithm for this:
                 """
             ]
         , codeBlock__ True <|
@@ -572,7 +554,7 @@ replaceEmojis str =
                 "https://package.elm-lang.org/packages/elm-community/list-extra/latest/List-Extra#getAt"
                 "elm-community/list-extra"
             , text
-                """ to attempt to get the indices of first and second colons. Can you fill in the right functions to use?
+                """ to attempt to get the indices of the first and the second colons. Can you fill in the right functions to use?
                 """
             ]
         , let
@@ -582,30 +564,38 @@ replaceEmojis str =
                     [ Font.color red ]
                     (text "The answer is shorter.")
 
-            withCorrectMark : Bool -> Element Msg -> Element Msg
-            withCorrectMark isCorrect inputView =
+            withCorrectnessMark : Bool -> Element Msg -> Element Msg
+            withCorrectnessMark isCorrect inputView =
                 el
                     [ onRight <|
                         if isCorrect then
                             image
-                                [ centerY ]
+                                [ paddingEach { edges | left = 5 }
+                                , centerY
+                                ]
                                 { src = "/static/noto-emoji/32/emoji_u2705.png"
                                 , description = "Tick"
                                 }
 
                         else
-                            Element.none
+                            image
+                                [ paddingEach { edges | left = 5 }
+                                , centerY
+                                ]
+                                { src = "/static/noto-emoji/32/emoji_u274c.png"
+                                , description = "Cross"
+                                }
                     , centerY
                     ]
                     inputView
           in
           row
-            [ spacing 40 ]
+            [ spacing 50 ]
             [ column
                 [ spacing 10
                 , alignTop
                 ]
-                [ withCorrectMark isFirstColonPairInputCorrect_Maybe <|
+                [ withCorrectnessMark isFirstColonPairInputCorrect_Maybe <|
                     Input.text
                         [ width <| Element.px 150
                         , Font.family [ Font.monospace ]
@@ -625,7 +615,7 @@ replaceEmojis str =
                 [ spacing 10
                 , alignTop
                 ]
-                [ withCorrectMark isFirstColonPairInputCorrect_Tuple <|
+                [ withCorrectnessMark isFirstColonPairInputCorrect_Tuple <|
                     Input.text
                         [ width <| Element.px 150
                         , Font.family [ Font.monospace ]
@@ -644,7 +634,12 @@ replaceEmojis str =
             ]
         , paragraph
             []
-            [ text "Complete the case where "
+            [ text
+                """
+                If it can't find at least 2 colons, that means there definitely isn't any emoji in the string, and the whole string should just be parsed as 
+                """
+            , inlineCode "Text"
+            , text ". Complete the case where "
             , inlineCode "firstColonPair"
             , text " is "
             , inlineCode "Nothing"
@@ -664,7 +659,15 @@ replaceEmojis str =
             []
             [ text
                 """
-                If there is a colon pair, we get the indices of the first and second colon, and slice out the string between the colons. We'll be implementing the checking of whether that string is a valid emoji unicode later. Can you complete what should be appended in the not emoji case?
+                If it finds two colons, it slices out the substring in-between, and checks if it's an emoji unicode. If it is not, then everything before the second colon should be parsed as 
+                """
+            , inlineCode "Text"
+            , text
+                """. Be careful not to include the second colon here. It could be a part of a following emoji!
+                """
+            , text
+                """
+                We'll be implementing the checking of whether that string is a valid emoji unicode later. Can you complete what should be appended in the not emoji case?
                 """
             ]
         , limitedLengthInput
@@ -677,7 +680,25 @@ replaceEmojis str =
             , placeholder = Nothing
             , label = Input.labelHidden ""
             }
-        , plainPara "And what's to be concatenated in the \"Found an emoji\" case?"
+        , paragraph
+            []
+            [ text
+                """
+            And if the substring between colon is an emoji unicode, then everything before the 
+            """
+            , italicText "first"
+            , text " colon should be parsed as "
+            , inlineCode "Text"
+            , text ", the unicode and the surrounding colons should be parsed as "
+            , inlineCode "Emoji"
+            , text ". In both cases, the rest of the string will be parsed into a list of "
+            , inlineCode "Piece"
+            , text
+                """s by a recursive call to the function itself. The result is the whole thing concatenated.
+                """
+            ]
+        , plainPara
+            "And what's to be concatenated in the \"Found an emoji\" case?"
         , limitedLengthMultiline
             isEmojiCaseInputMaxLength
             [ width fill

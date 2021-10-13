@@ -137,6 +137,7 @@ inlineCode str =
         [ Background.color codeGray
         , Border.rounded 2
         , paddingXY 4 1
+        , Font.family [ Font.monospace ]
         ]
         (sizedText 18 str)
 
