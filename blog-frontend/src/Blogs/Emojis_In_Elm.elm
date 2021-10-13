@@ -89,14 +89,20 @@ type alias Model =
     { unicodeToPathInput : String
     , unicodeToPathResp : Maybe ElmTestResp
     , isUnicodeToPathSkipped : Bool
+    , showUnicodeToPathAnswer : Bool
+
+    --
     , firstColonPairInput_Maybe : String
     , isFirstColonPairInputTooLong_Maybe : Bool
     , firstColonPairInput_Tuple : String
     , isFirstColonPairInputTooLong_Tuple : Bool
+
+    --
     , noColonCaseInput : String
     , notEmojiCaseInput : String
     , isEmojiCaseInput : String
     , renderResult : Result Http.Error Elm.Make.Result
+    , showRenderAnswer : Bool
     , error : Maybe Http.Error
     }
 
@@ -105,12 +111,16 @@ type Msg
     = OnUserInputUnicodeToPath String
     | OnUserRunUnicodeToPath
     | GotRunUnicodeToPathResp (Result Http.Error ElmTestResp)
+    | OnUserToggleUnicodeToPathAnswer
+      --
     | OnUserInputFirstColonPair_Maybe String
     | OnUserInputFirstColonPair_Tuple String
+      --
     | OnUserInputNoColonCase String
     | OnUserInputNotEmojiCase String
     | OnUserInputIsEmojiCase String
     | OnUserRender
+    | OnUserToggleRenderAnswer
     | GotRenderResp (Result Http.Error Elm.Make.Result)
 
 
@@ -123,14 +133,22 @@ init =
     { unicodeToPathInput = ""
     , unicodeToPathResp = Nothing
     , isUnicodeToPathSkipped = False
+    , showUnicodeToPathAnswer = False
+
+    --
     , firstColonPairInput_Maybe = ""
     , isFirstColonPairInputTooLong_Maybe = False
     , firstColonPairInput_Tuple = ""
     , isFirstColonPairInputTooLong_Tuple = False
+
+    --
     , noColonCaseInput = ""
     , notEmojiCaseInput = ""
     , isEmojiCaseInput = ""
+
+    --
     , renderResult = Ok <| Elm.Make.Html ""
+    , showRenderAnswer = False
     , error = Nothing
     }
 
@@ -166,6 +184,11 @@ update msg model =
                     ( { model | unicodeToPathResp = Just resp }
                     , Cmd.none
                     )
+
+        OnUserToggleUnicodeToPathAnswer ->
+            ( { model | showUnicodeToPathAnswer = not model.showUnicodeToPathAnswer }
+            , Cmd.none
+            )
 
         OnUserInputFirstColonPair_Maybe str ->
             if String.length str >= 10 then
@@ -224,6 +247,11 @@ update msg model =
 
               else
                 Cmd.none
+            )
+
+        OnUserToggleRenderAnswer ->
+            ( { model | showRenderAnswer = not model.showRenderAnswer }
+            , Cmd.none
             )
 
         GotRenderResp result ->
@@ -353,13 +381,36 @@ unicodeToPath unicode =
             , placeholder = Nothing
             , label = Input.labelHidden ""
             }
-        , borderedButton OnUserRunUnicodeToPath "Compile and Run!"
+        , row
+            [ spacing 12 ]
+            [ borderedButton OnUserRunUnicodeToPath "Compile and Run!"
+            , borderedButton OnUserToggleUnicodeToPathAnswer <|
+                if model.showUnicodeToPathAnswer then
+                    "Hide Answer"
+
+                else
+                    "Reveal Answer"
+            ]
         , el
             [ Border.width 2
             , padding 10
             , width fill
             ]
             (unicodeToPathRespView model.unicodeToPathResp)
+        , if model.showUnicodeToPathAnswer then
+            column
+                [ Border.width 2
+                , padding 10
+                , spacing 10
+                , width fill
+                , Font.family [ Font.monospace ]
+                ]
+                [ text "Answer is:"
+                , plainPara "\"/static/noto-emoji/32/emoji_u\" ++ unicode ++ \".png\""
+                ]
+
+          else
+            Element.none
         , paragraph
             []
             [ text "Now that we can find the image based on the unicode the user has entered like "
@@ -639,7 +690,35 @@ replaceEmojis str =
             , label = Input.labelHidden ""
             , spellcheck = False
             }
-        , borderedButton OnUserRender "Compile and Run!"
+        , row
+            [ spacing 15 ]
+            [ borderedButton OnUserRender "Compile and Run!"
+            , borderedButton OnUserToggleRenderAnswer <|
+                if model.showRenderAnswer then
+                    "Hide Answer"
+
+                else
+                    "Reveal Answer"
+            ]
+        , if model.showRenderAnswer then
+            codeBlock__ True
+                """
+-- Here are the answers.
+
+-- No colon case:
+[ Text str ]
+
+-- Not emoji case:
+(replaceEmojis <| String.dropLeft secondColonIndex str)
+
+-- Found emoji case:
+[ Text <| String.left firstColonIndex str
+, Emoji possibleEmojiName
+]
+                        """
+
+          else
+            Element.none
         , case model.renderResult of
             Err httpError ->
                 httpErrorView httpError
