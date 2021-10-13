@@ -12,6 +12,7 @@ import Element
         , spacing
         , text
         )
+import Element.Font as Font
 import Html exposing (Html)
 import List.Extra as List
 import String.Extra as String
@@ -96,11 +97,13 @@ view _ =
         targetStringView target =
             column
                 [ spacing 10 ]
-                [ paragraph [] [ text <| "Target string - " ++ target ]
-                , row
-                    []
-                  <|
-                    [ text "Actual result - " ]
+                [ text <| "Target   string - " ++ target
+                , row [] <|
+                    [ text "Expected result - " ]
+                        ++ (List.map renderPiece <| correctReplaceEmojis target)
+
+                , row [] <|
+                    [ text "Actual   result - " ]
                         ++ (List.map renderPiece <| replaceEmojis target)
                 ]
     in
@@ -110,6 +113,7 @@ view _ =
         column
             [ padding 10
             , spacing 40
+            , Font.family [ Font.monospace ]
             ]
             (List.map targetStringView targetStrings)
 
@@ -123,49 +127,40 @@ main =
         }
 
 
+correctReplaceEmojis : String -> List Piece
+correctReplaceEmojis str =
+    let
+        colonIndices : List Int
+        colonIndices =
+            String.indices ":" str
 
-{- Correct replaceEmojis
-   replaceEmojis : String -> List Piece
-   replaceEmojis str =
-       let
-           colonIndices : List Int
-           colonIndices =
-               String.indices ":" str
+        firstColonPair : Maybe ( Int, Int )
+        firstColonPair =
+            Maybe.map2 Tuple.pair
+                (List.getAt 0 colonIndices)
+                (List.getAt 1 colonIndices)
+    in
+    case firstColonPair of
+        -- No pair of colons. No emojis.
+        Nothing ->
+            [ Text str ]
 
-           firstColonPair : Maybe ( Int, Int )
-           firstColonPair =
-               Maybe.map2 Tuple.pair
-                   (List.getAt 0 colonIndices)
-                   (List.getAt 1 colonIndices)
-       in
-       case firstColonPair of
-           -- No pair of colons. No emojis.
-           Nothing ->
-               [ Text str ]
+        Just ( firstColonIndex, secondColonIndex ) ->
+            let
+                possibleEmojiName =
+                    String.slice (firstColonIndex + 1) secondColonIndex str
 
-           Just pair ->
-               let
-                   firstColonIndex =
-                       Tuple.first pair
+                isEmoji =
+                    True
+            in
+            -- Has colon of pairs, but it doesn't match an emoji name.
+            if not isEmoji then
+                (Text <| String.left secondColonIndex str)
+                    :: (correctReplaceEmojis <| String.dropLeft secondColonIndex str)
 
-                   secondColonIndex =
-                       Tuple.second pair
-
-                   possibleEmojiName =
-                       String.slice (firstColonIndex + 1) secondColonIndex str
-
-                   isEmoji =
-                       True
-               in
-               -- Has colon of pairs, but it doesn't match an emoji name.
-               if not isEmoji then
-                   (Text <| String.left secondColonIndex str)
-                       :: (replaceEmojis <| String.dropLeft secondColonIndex str)
-
-               else
-                   -- Found an emoji
-                   [ Text <| String.left firstColonIndex str
-                   , Emoji possibleEmojiName
-                   ]
-                       ++ (replaceEmojis <| String.dropLeft (secondColonIndex + 1) str)
--}
+            else
+                -- Found an emoji
+                [ Text <| String.left firstColonIndex str
+                , Emoji possibleEmojiName
+                ]
+                    ++ (correctReplaceEmojis <| String.dropLeft (secondColonIndex + 1) str)
