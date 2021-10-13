@@ -82,12 +82,17 @@ import Http
 import Json.Encode as JEnc
 import String.Extra as String
 import Url.Builder
-import Utils.Networking exposing (plainPutReq, utf8StringBody)
+import Utils.Networking
+    exposing
+        ( httpErrorToStr
+        , plainPutReq
+        , utf8StringBody
+        )
 
 
 type alias Model =
     { unicodeToPathInput : String
-    , unicodeToPathResp : Maybe ElmTestResp
+    , unicodeToPathStatus : CompileStatus ElmTestResp
     , isUnicodeToPathSkipped : Bool
     , showUnicodeToPathAnswer : Bool
 
@@ -101,7 +106,7 @@ type alias Model =
     , noColonCaseInput : String
     , notEmojiCaseInput : String
     , isEmojiCaseInput : String
-    , renderResult : Result Http.Error Elm.Make.Result
+    , renderStatus : CompileStatus Elm.Make.Result
     , showRenderAnswer : Bool
     , error : Maybe Http.Error
     }
@@ -124,6 +129,13 @@ type Msg
     | GotRenderResp (Result Http.Error Elm.Make.Result)
 
 
+type CompileStatus result
+    = NotStarted
+    | Waiting
+    | GotResult result
+    | GotError Http.Error
+
+
 title =
     "Emojis In Elm"
 
@@ -131,7 +143,7 @@ title =
 init : Model
 init =
     { unicodeToPathInput = ""
-    , unicodeToPathResp = Nothing
+    , unicodeToPathStatus = NotStarted
     , isUnicodeToPathSkipped = False
     , showUnicodeToPathAnswer = False
 
@@ -147,7 +159,7 @@ init =
     , isEmojiCaseInput = ""
 
     --
-    , renderResult = Ok <| Elm.Make.Html ""
+    , renderStatus = NotStarted
     , showRenderAnswer = False
     , error = Nothing
     }
@@ -162,7 +174,7 @@ update msg model =
             )
 
         OnUserRunUnicodeToPath ->
-            ( model
+            ( { model | unicodeToPathStatus = Waiting }
             , if String.length model.unicodeToPathInput > unicodeToPathInputMaxLength then
                 Cmd.none
 
@@ -174,16 +186,17 @@ update msg model =
             )
 
         GotRunUnicodeToPathResp result ->
-            case result of
-                Err httpError ->
-                    ( { model | error = Just httpError }
-                    , Cmd.none
-                    )
+            ( { model
+                | unicodeToPathStatus =
+                    case result of
+                        Err httpError ->
+                            GotError httpError
 
-                Ok resp ->
-                    ( { model | unicodeToPathResp = Just resp }
-                    , Cmd.none
-                    )
+                        Ok elmTestResp ->
+                            GotResult elmTestResp
+              }
+            , Cmd.none
+            )
 
         OnUserToggleUnicodeToPathAnswer ->
             ( { model | showUnicodeToPathAnswer = not model.showUnicodeToPathAnswer }
@@ -224,7 +237,7 @@ update msg model =
             ( { model | isEmojiCaseInput = str }, Cmd.none )
 
         OnUserRender ->
-            ( model
+            ( { model | renderStatus = Waiting }
             , -- Check if any user input has exceeded max length.
               if
                 String.length model.noColonCaseInput
@@ -255,7 +268,15 @@ update msg model =
             )
 
         GotRenderResp result ->
-            ( { model | renderResult = result }
+            ( { model
+                | renderStatus =
+                    case result of
+                        Err httpError ->
+                            GotError httpError
+
+                        Ok elmMakeResult ->
+                            GotResult elmMakeResult
+              }
             , Cmd.none
             )
 
@@ -383,7 +404,13 @@ unicodeToPath unicode =
             }
         , row
             [ spacing 12 ]
-            [ borderedButton OnUserRunUnicodeToPath "Compile and Run!"
+            [ borderedButton OnUserRunUnicodeToPath <|
+                case model.unicodeToPathStatus of
+                    Waiting ->
+                        "Compiling..."
+
+                    _ ->
+                        "Compile and Run!"
             , borderedButton OnUserToggleUnicodeToPathAnswer <|
                 if model.showUnicodeToPathAnswer then
                     "Hide Answer"
@@ -391,12 +418,6 @@ unicodeToPath unicode =
                 else
                     "Reveal Answer"
             ]
-        , el
-            [ Border.width 2
-            , padding 10
-            , width fill
-            ]
-            (unicodeToPathRespView model.unicodeToPathResp)
         , if model.showUnicodeToPathAnswer then
             column
                 [ Border.width 2
@@ -411,6 +432,7 @@ unicodeToPath unicode =
 
           else
             Element.none
+        , unicodeToPathStatusView model.unicodeToPathStatus
         , paragraph
             []
             [ text "Now that we can find the image based on the unicode the user has entered like "
@@ -713,7 +735,13 @@ replaceEmojis str =
             }
         , row
             [ spacing 15 ]
-            [ borderedButton OnUserRender "Compile and Run!"
+            [ borderedButton OnUserRender <|
+                case model.renderStatus of
+                    Waiting ->
+                        "Compiling..."
+
+                    _ ->
+                        "Compile and Run!"
             , borderedButton OnUserToggleRenderAnswer <|
                 if model.showRenderAnswer then
                     "Hide Answer"
@@ -740,18 +768,18 @@ replaceEmojis str =
 
           else
             Element.none
-        , case model.renderResult of
-            Err httpError ->
+        , case model.renderStatus of
+            GotError httpError ->
                 httpErrorView httpError
 
-            Ok (Elm.Make.CompilerError str) ->
+            GotResult (Elm.Make.CompilerError str) ->
                 el
                     (squareBorder 10
                         ++ [ width fill ]
                     )
                     (Elm.Compiler.errorView str)
 
-            Ok (Elm.Make.Html str) ->
+            GotResult (Elm.Make.Html str) ->
                 el
                     [ width fill ]
                 <|
@@ -761,6 +789,24 @@ replaceEmojis str =
                             , HtmlAttr.style "height" "700px"
                             ]
                             []
+
+            NotStarted ->
+                el
+                    (squareBorder 10
+                        ++ [ width fill
+                           , Font.family [ Font.monospace ]
+                           ]
+                    )
+                    (text "Run the code and result will be displayed.")
+
+            Waiting ->
+                el
+                    (squareBorder 10
+                        ++ [ width fill
+                           , Font.family [ Font.monospace ]
+                           ]
+                    )
+                    (text "Compiling...")
         , plainPara
             """
             If your results match the expected, then congrats! We are now parsing emojis in a piece of text. Except for the last case. It's vital to check if the string between a colon pair is meant for an emoji. Not doing so can throw off the parsing of the whole string. This will be included in the next part of the guide, which I'll publish once it's completed.
@@ -768,67 +814,98 @@ replaceEmojis str =
         ]
 
 
-unicodeToPathRespView : Maybe ElmTestResp -> Element msg
-unicodeToPathRespView maybeResp =
-    case maybeResp of
-        Nothing ->
-            Elm.Test.noRespView_
-
-        Just resp ->
-            case resp of
-                CompilerError_ errorMsg ->
-                    Elm.Compiler.errorView errorMsg
-
-                Results results ->
-                    let
-                        mkEmoji : String -> Element msg
-                        mkEmoji src =
-                            el
-                                [ alignRight
-                                , paddingEach { edges | right = 20 }
-                                ]
-                            <|
-                                image
-                                    [ Border.widthEach { edges | left = 2 }
-                                    , paddingEach { edges | left = 10 }
-                                    ]
-                                    { src = src
-                                    , description = ""
-                                    }
-                    in
-                    elmTestResultsView
-                        results
-                        [ String.quote grinEmojiPath
-                        , String.quote robotEmojiPath
-                        , String.quote heartEmojiPath
+unicodeToPathStatusView : CompileStatus ElmTestResp -> Element msg
+unicodeToPathStatusView status =
+    el
+        [ Border.width 2
+        , padding 10
+        , width fill
+        , Font.family [ Font.monospace ]
+        ]
+    <|
+        case status of
+            GotError httpError ->
+                column
+                    [ width fill
+                    , spacing 15
+                    ]
+                    [ el
+                        [ Border.widthEach { edges | bottom = 2 }
+                        , paddingEach { edges | bottom = 5 }
+                        , width fill
                         ]
-                        (\failure ->
-                            column
-                                [ width fill
-                                , spacing 10
-                                ]
-                                [ row
-                                    [ width fill ]
-                                    [ plainPara <| "Expected: " ++ failure.expected
-                                    , mkEmoji <| String.unquote failure.expected
-                                    ]
-                                , row
-                                    [ width fill ]
-                                    [ wordBreakPara <| "Actual: " ++ failure.actual
-                                    , mkEmoji <| String.unquote failure.actual
-                                    ]
-                                ]
+                        (el
+                            [ Font.size 24
+                            , Font.color red
+                            ]
+                            (text "Networking Error")
                         )
-                        (\expected ->
-                            row
-                                [ width fill ]
-                                [ plainPara <| "Passed: " ++ expected
-                                , mkEmoji <| String.unquote expected
-                                ]
-                        )
+                    , paragraph
+                        [ width fill ]
+                        [ text <| httpErrorToStr httpError ]
+                    ]
 
-                InternalServerError ->
-                    Elm.Test.internalServerErrorView
+            GotResult elmTestResp ->
+                case elmTestResp of
+                    CompilerError_ errorMsg ->
+                        Elm.Compiler.errorView errorMsg
+
+                    Results results ->
+                        let
+                            mkEmoji : String -> Element msg
+                            mkEmoji src =
+                                el
+                                    [ alignRight
+                                    , paddingEach { edges | right = 20 }
+                                    ]
+                                <|
+                                    image
+                                        [ Border.widthEach { edges | left = 2 }
+                                        , paddingEach { edges | left = 10 }
+                                        ]
+                                        { src = src
+                                        , description = ""
+                                        }
+                        in
+                        elmTestResultsView
+                            results
+                            [ String.quote grinEmojiPath
+                            , String.quote robotEmojiPath
+                            , String.quote heartEmojiPath
+                            ]
+                            (\failure ->
+                                column
+                                    [ width fill
+                                    , spacing 10
+                                    ]
+                                    [ row
+                                        [ width fill ]
+                                        [ plainPara <| "Expected: " ++ failure.expected
+                                        , mkEmoji <| String.unquote failure.expected
+                                        ]
+                                    , row
+                                        [ width fill ]
+                                        [ wordBreakPara <| "Actual: " ++ failure.actual
+                                        , mkEmoji <| String.unquote failure.actual
+                                        ]
+                                    ]
+                            )
+                            (\expected ->
+                                row
+                                    [ width fill ]
+                                    [ plainPara <| "Passed: " ++ expected
+                                    , mkEmoji <| String.unquote expected
+                                    ]
+                            )
+
+                    InternalServerError ->
+                        Elm.Test.internalServerErrorView
+
+            NotStarted ->
+                text "Run the code and result will be displayed."
+
+            Waiting ->
+                text "Compiling..."
 
 
 indentMultiline : Int -> String -> String
