@@ -169,14 +169,13 @@ class User(HttpUser):
 
             html = response.json().get("html")
             if html != None:
-                # User's code should all render nothing,
-                # so these substrings should only show up once,
-                # after the "Target string -".
-                # Other strings are omitted.
-                if not html.count("No colon in this sentence.") == 1 and \
-                       html.count("One colon : here.") == 1 and \
-                       html.count("One colon at the end:") == 1:
-                    response.failure("Returned html has unexpected number of various substrings.")
+                # TODO: Number of substring occurrences in the html doesn't indicate 
+                #       Number of times they show up after rendered. Research new ways.
+                #if not (html.count("No colon in this sentence.") == 1 and \
+                #        html.count("One colon : here.") == 1 and \
+                #        html.count("One colon at the end:") == 1):
+                #    response.failure("Returned html has unexpected number of various substrings.")
+                pass
             else:
                 resp_json_str = ""
                 for k, v in response.json().items():
@@ -208,16 +207,15 @@ class User(HttpUser):
 
             html = response.json().get("html")
             if html != None:
-                # User's code should all render correctly,
-                # so these substrings should all show up twice,
-                # once as target string and once as actual result.
-                # Other strings are omitted.
-                if not html.count("No colon in this sentence.") == 2 and \
-                       html.count("One colon : here.") == 2 and \
-                       html.count("One colon at the end:") == 2:
-                    response.failure("Code is correct, but \
-                        returned html has unexpected number of various substrings."
-                    )
+                # TODO: Number of substring occurrences in the html doesn't indicate 
+                #       Number of times they show up after rendered. Research new ways.
+                #if not html.count("No colon in this sentence.") == 2 and \
+                #       html.count("One colon : here.") == 2 and \
+                #       html.count("One colon at the end:") == 2:
+                #    response.failure("Code is correct, but \
+                #        returned html has unexpected number of various substrings."
+                #    )
+                pass
             else:
                 resp_json_str = ""
                 for k, v in response.json().items():
