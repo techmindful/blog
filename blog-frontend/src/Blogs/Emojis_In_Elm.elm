@@ -174,16 +174,16 @@ update msg model =
             )
 
         OnUserRunUnicodeToPath ->
-            ( { model | unicodeToPathStatus = Waiting }
-            , if String.length model.unicodeToPathInput > unicodeToPathInputMaxLength then
-                Cmd.none
+            if String.length model.unicodeToPathInput > unicodeToPathInputMaxLength then
+                ( model, Cmd.none )
 
-              else
-                plainPutReq
+            else
+                ( { model | unicodeToPathStatus = Waiting }
+                , plainPutReq
                     (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "unicode-to-path" ] [])
                     (utf8StringBody model.unicodeToPathInput)
                     (Http.expectJson GotRunUnicodeToPathResp elmTestRespDecoder)
-            )
+                )
 
         GotRunUnicodeToPathResp result ->
             ( { model
@@ -237,17 +237,17 @@ update msg model =
             ( { model | isEmojiCaseInput = str }, Cmd.none )
 
         OnUserRender ->
-            ( { model | renderStatus = Waiting }
-            , -- Check if any user input has exceeded max length.
-              if
+            if
                 String.length model.noColonCaseInput
                     <= noColonCaseInputMaxLength
                     && String.length model.notEmojiCaseInput
                     <= notEmojiCaseInputMaxLength
                     && String.length model.isEmojiCaseInput
                     <= isEmojiCaseInputMaxLength
-              then
-                plainPutReq
+            then
+                ( { model | renderStatus = Waiting }
+                , -- Check if any user input has exceeded max length.
+                  plainPutReq
                     (Url.Builder.relative [ blogApisRoot, "emojis-in-elm", "render" ] [])
                     (Http.jsonBody <|
                         JEnc.object
@@ -257,10 +257,10 @@ update msg model =
                             ]
                     )
                     (Http.expectJson GotRenderResp Elm.Make.resultParser)
+                )
 
-              else
-                Cmd.none
-            )
+            else
+                ( model, Cmd.none )
 
         OnUserToggleRenderAnswer ->
             ( { model | showRenderAnswer = not model.showRenderAnswer }
