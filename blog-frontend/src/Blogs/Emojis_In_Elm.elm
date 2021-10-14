@@ -332,10 +332,20 @@ view model =
                 First we need to get the emoji images. Google's Noto Emoji seems like an okay option: 
                 """
             , underlinedNewTabLink_ "https://github.com/googlefonts/noto-emoji"
-            , text """. To get the emoji images, I had to download the entire repo. Then I went into the png folder, where emoji images of various sizes reside. I copied the folder of 32x32 version into a new folder I made under my project: 
+            , text """. To get the emoji images, I had to download the entire repo. Then I went into its """
+            , inlineCode "png/"
+            , text
+                """ 
+                 directory, where emoji images of various sizes reside. I copied the directory of 32x32 version into a new directory I made under my project: 
                 """
-            , inlineCode "static/noto-emoji/32/"
-            , text """. Alternatively, OpenMoji looks like a great option too: """
+            , inlineCode "frontend/static/noto-emoji/32/"
+            , text ". Note that "
+            , inlineCode "frontend/"
+            , text " is Elm's directory, where "
+            , inlineCode "elm.json"
+            , text " and "
+            , inlineCode "src/"
+            , text " reside. Alternatively, OpenMoji looks like a great option too: "
             , underlinedNewTabLink_ "https://github.com/hfg-gmuend/openmoji"
             , text ". This guide should be still applicable if you choose another vendor. Please comply with the licensing and copyright requirements, whichever vendor you choose."
             ]
