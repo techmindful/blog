@@ -895,7 +895,13 @@ unicodeToPathStatusView status =
                                         ]
                                     , row
                                         [ width fill ]
-                                        [ wordBreakPara <| "Actual: " ++ failure.actual
+                                        [ Element.html <|
+                                            Html.p
+                                                [ HtmlAttr.style "white-space" "pre-wrap"
+                                                , HtmlAttr.style "overflow-wrap" "anywhere"
+                                                , HtmlAttr.style "margin" "0 auto"
+                                                ]
+                                                [ Html.text <| "Actual  : " ++ failure.actual ]
                                         , mkEmoji <| String.unquote failure.actual
                                         ]
                                     ]
