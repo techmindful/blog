@@ -122,11 +122,11 @@ underlinedNewTabLink_ url =
         }
 
 
-borderedButton : msg_ -> String -> Element msg_
-borderedButton msg labelStr =
+borderedButton : Maybe msg_ -> String -> Element msg_
+borderedButton maybeMsg labelStr =
     button
         roundedBorder
-        { onPress = Just msg
+        { onPress = maybeMsg
         , label = Element.text labelStr
         }
 

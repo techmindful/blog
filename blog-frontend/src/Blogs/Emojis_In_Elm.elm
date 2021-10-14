@@ -37,6 +37,7 @@ import Common.Styles
         ( blogViewPadding
         , edges
         , paraSpacing
+        , roundedBorder
         , squareBorder
         )
 import Common.Urls exposing (blogApisRoot)
@@ -414,14 +415,13 @@ unicodeToPath unicode =
             }
         , row
             [ spacing 12 ]
-            [ borderedButton OnUserRunUnicodeToPath <|
-                case model.unicodeToPathStatus of
-                    Waiting ->
-                        "Compiling..."
+            [ case model.unicodeToPathStatus of
+                Waiting ->
+                    borderedButton Nothing "Compiling..."
 
-                    _ ->
-                        "Compile and Run!"
-            , borderedButton OnUserToggleUnicodeToPathAnswer <|
+                _ ->
+                    borderedButton (Just OnUserRunUnicodeToPath) "Compile and Run!"
+            , borderedButton (Just OnUserToggleUnicodeToPathAnswer) <|
                 if model.showUnicodeToPathAnswer then
                     "Hide Answer"
 
@@ -746,14 +746,13 @@ replaceEmojis str =
             }
         , row
             [ spacing 15 ]
-            [ borderedButton OnUserRender <|
-                case model.renderStatus of
-                    Waiting ->
-                        "Compiling..."
+            [ case model.renderStatus of
+                Waiting ->
+                    borderedButton Nothing "Compiling..."
 
-                    _ ->
-                        "Compile and Run!"
-            , borderedButton OnUserToggleRenderAnswer <|
+                _ ->
+                    borderedButton (Just OnUserRender) "Compile and Run!"
+            , borderedButton (Just OnUserToggleRenderAnswer) <|
                 if model.showRenderAnswer then
                     "Hide Answer"
 
