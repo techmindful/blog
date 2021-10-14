@@ -556,6 +556,7 @@ replaceEmojis str =
                 possibleEmojiName =
                     String.slice (firstColonIndex + 1) secondColonIndex str
 
+                -- TODO: Implement the check later.
                 isEmoji =
                     True
             in
@@ -796,7 +797,7 @@ replaceEmojis str =
                     Element.html <|
                         Html.iframe
                             [ HtmlAttr.srcdoc <| str
-                            , HtmlAttr.style "height" "700px"
+                            , HtmlAttr.style "height" "900px"
                             ]
                             []
 
@@ -819,7 +820,7 @@ replaceEmojis str =
                     (text "Compiling...")
         , plainPara
             """
-            If your results match the expected, then congrats! We are now parsing emojis in a piece of text. Except for the last case. It's vital to check if the string between a colon pair is meant for an emoji. Not doing so can throw off the parsing of the whole string. This will be included in the next part of the guide, which I'll publish once it's completed.
+            If your results match the expected, then congrats! We are now parsing emojis in a piece of text. Except that we haven't implemented the vital check of whether the string between a colon pair is meant for an emoji. Not doing so can throw off the parsing of the whole string, as demonstrated earlier. This will be included in the next part of the guide, which I'll publish once it's completed.
             """
         ]
 
