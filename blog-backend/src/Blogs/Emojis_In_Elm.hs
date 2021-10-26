@@ -158,10 +158,6 @@ renderHandler userCode = do
                                  ( userCode & noColonCase )
                              )
                        & map ( modifyTemplateLine
-                                 "-- Insert notEmojiCase here."
-                                 ( ":: " <> ( userCode & notEmojiCase ) )
-                             )
-                       & map ( modifyTemplateLine
                                  "-- Insert isEmojiCase here."
                                  ( userCode & isEmojiCase )
                              )

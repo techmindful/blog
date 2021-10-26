@@ -30,23 +30,8 @@ unicodeToPath unicode =
 
 replaceEmojis : String -> List Piece
 replaceEmojis str =
-    let
-        colonIndices : List Int
-        colonIndices =
-            String.indices ":" str
-
-        firstColonPair : Maybe ( Int, Int )
-        firstColonPair =
-            Maybe.map2 Tuple.pair
-                (List.getAt 0 colonIndices)
-                (List.getAt 1 colonIndices)
-    in
-    case firstColonPair of
-        -- No pair of colons. No emojis.
-        Nothing ->
-            -- Insert noColonCase here.
-
-        Just ( firstColonIndex, secondColonIndex ) ->
+    case String.indices ":" str of
+        firstColonIndex :: secondColonIndex :: _ ->
             let
                 possibleEmojiName =
                     String.slice (firstColonIndex + 1) secondColonIndex str
@@ -57,12 +42,16 @@ replaceEmojis str =
             -- Has colon of pairs, but it doesn't match an emoji name.
             if not isEmoji then
                 (Text <| String.left secondColonIndex str)
-                    -- Insert notEmojiCase here.
+                    :: (replaceEmojis <| String.dropLeft secondColonIndex str)
 
             else
                 -- Found an emoji
                 -- Insert isEmojiCase here.
                 ++ (replaceEmojis <| String.dropLeft (secondColonIndex + 1) str)
+
+        -- No pair of colons. No emojis.
+        _ ->
+            -- Insert noColonCase here.
 
 
 renderPiece : Piece -> Element msg

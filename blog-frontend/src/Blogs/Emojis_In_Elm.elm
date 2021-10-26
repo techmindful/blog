@@ -529,29 +529,8 @@ unicodeToPath unicode =
             """
 replaceEmojis : String -> List Piece
 replaceEmojis str =
-    let
-        colonIndices : List Int
-        colonIndices =
-            String.indices ":" str
-
-        firstColonPair : Maybe ( Int, Int )
-        firstColonPair =
-            """
-                ++ ("Maybe." ++ userFillableCode_ model.firstColonPairInput_Maybe)
-                ++ " "
-                ++ ("Tuple." ++ userFillableCode_ model.firstColonPairInput_Tuple)
-                ++ """
-                (List.getAt 0 colonIndices)
-                (List.getAt 1 colonIndices)
-    in
-    case firstColonPair of
-        -- No pair of colons. No emojis.
-        Nothing ->
-            """
-                ++ userFillableCode_ model.noColonCaseInput
-                ++ """
-
-        Just ( firstColonIndex, secondColonIndex )  ->
+    case String.indices ":" str of
+        firstColonIndex :: secondColonIndex :: _ ->
             let
                 possibleEmojiName =
                     String.slice (firstColonIndex + 1) secondColonIndex str
@@ -563,120 +542,36 @@ replaceEmojis str =
             -- Has colon of pairs, but it doesn't match an emoji name.
             if not isEmoji then
                 (Text <| String.left secondColonIndex str)
-                    :: """
-                ++ userFillableCode_ model.notEmojiCaseInput
+                    :: (replaceEmojis <| String.dropLeft secondColonIndex str)"""
                 ++ """
+
             -- Found an emoji
             else
 """
                 ++ (indentMultiline 16 <| userFillableCode_ model.isEmojiCaseInput)
                 ++ """
                 ++ (replaceEmojis <| String.dropLeft (secondColonIndex + 1) str)
+
+        -- No pair of colons. No emojis.
+        _ ->
             """
-        , paragraph
-            []
-            [ inlineCode "colonIndices"
-            , text
-                """ locates the index of each colon character in the string. 
-                """
-            , inlineCode "firstColonPair"
-            , text " uses "
-            , inlineCode "List.getAt"
-            , text " from "
-            , underlinedNewTabLink
-                "https://package.elm-lang.org/packages/elm-community/list-extra/latest/List-Extra#getAt"
-                "elm-community/list-extra"
-            , text
-                """ to attempt to get the indices of the first and the second colons. Can you fill in the right functions to use?
-                """
-            ]
-        , let
-            tooLongHint : Element msg
-            tooLongHint =
-                el
-                    [ Font.color red ]
-                    (text "The answer is shorter.")
-
-            withCorrectnessMark : Bool -> Element Msg -> Element Msg
-            withCorrectnessMark isCorrect inputView =
-                el
-                    [ onRight <|
-                        if isCorrect then
-                            image
-                                [ paddingEach { edges | left = 5 }
-                                , centerY
-                                ]
-                                { src = "/static/noto-emoji/32/emoji_u2705.png"
-                                , description = "Tick"
-                                }
-
-                        else
-                            image
-                                [ paddingEach { edges | left = 5 }
-                                , centerY
-                                ]
-                                { src = "/static/noto-emoji/32/emoji_u274c.png"
-                                , description = "Cross"
-                                }
-                    , centerY
-                    ]
-                    inputView
-          in
-          row
-            [ spacing 50 ]
-            [ column
-                [ spacing 10
-                , alignTop
-                ]
-                [ withCorrectnessMark isFirstColonPairInputCorrect_Maybe <|
-                    Input.text
-                        [ width <| Element.px 150
-                        , Font.family [ Font.monospace ]
-                        ]
-                        { onChange = OnUserInputFirstColonPair_Maybe
-                        , text = model.firstColonPairInput_Maybe
-                        , placeholder = Nothing
-                        , label = Input.labelLeft [] <| text "Maybe."
-                        }
-                , if model.isFirstColonPairInputTooLong_Maybe then
-                    tooLongHint
-
-                  else
-                    Element.none
-                ]
-            , column
-                [ spacing 10
-                , alignTop
-                ]
-                [ withCorrectnessMark isFirstColonPairInputCorrect_Tuple <|
-                    Input.text
-                        [ width <| Element.px 150
-                        , Font.family [ Font.monospace ]
-                        ]
-                        { onChange = OnUserInputFirstColonPair_Tuple
-                        , text = model.firstColonPairInput_Tuple
-                        , placeholder = Nothing
-                        , label = Input.labelLeft [] <| text "Tuple."
-                        }
-                , if model.isFirstColonPairInputTooLong_Tuple then
-                    tooLongHint
-
-                  else
-                    Element.none
-                ]
-            ]
+                ++ userFillableCode_ model.noColonCaseInput
         , paragraph
             []
             [ text
                 """
-                If it can't find at least 2 colons, that means there definitely isn't any emoji in the string, and the whole string should just be parsed as 
+                The pure function first tries to find two colons and their indices in the string, using
+                """
+            , inlineCode "String.indices"
+            , text " from "
+            , underlinedNewTabLink
+                "https://package.elm-lang.org/packages/elm/core/latest/String#indices"
+                "elm/core"
+            , text
+                """. If it can't find at least 2 colons, that means there definitely isn't any emoji in the string, and the whole string should just be parsed as 
                 """
             , inlineCode "Text"
-            , text ". Complete the case where "
-            , inlineCode "firstColonPair"
-            , text " is "
-            , inlineCode "Nothing"
-            , text ":"
+            , text ". Complete what to return in this case (the ??? at the last line):"
             ]
         , limitedLengthInput
             noColonCaseInputMaxLength
@@ -692,27 +587,22 @@ replaceEmojis str =
             []
             [ text
                 """
-                If it finds two colons, it slices out the substring in-between, and checks if it's an emoji unicode. If it is not, then everything before the second colon should be parsed as 
+                If it finds two colons, it slices out the substring in-between, and checks if it's an emoji unicode. We'll implement the checking later. But notice how we have the opportunity to implement the check, in contrast to using regex!
+                """
+            ]
+        , paragraph
+            []
+            [ text
+                """
+                If the substring in-between is not an emoji, then everything before the second colon should be parsed as 
                 """
             , inlineCode "Text"
             , text
-                """. Be careful not to include the second colon here. It could be a part of a following emoji!
+                """. Be careful not to include the second colon here. It could be a part of a following emoji! The code for what 
                 """
-            , text
-                """
-                We'll be implementing the checking of whether that string is a valid emoji unicode later. Can you complete what should be appended in the not emoji case?
-                """
+            , inlineCode "Piece"
+            , text "s to return is already given. Notice how it uses a recursive call to parse the rest of the string, starting at the second colon."
             ]
-        , limitedLengthInput
-            notEmojiCaseInputMaxLength
-            [ width fill
-            , Font.family [ Font.monospace ]
-            ]
-            { onChange = OnUserInputNotEmojiCase
-            , text = model.notEmojiCaseInput
-            , placeholder = Nothing
-            , label = Input.labelHidden ""
-            }
         , paragraph
             []
             [ text
@@ -724,14 +614,18 @@ replaceEmojis str =
             , inlineCode "Text"
             , text ", the unicode and the surrounding colons should be parsed as "
             , inlineCode "Emoji"
-            , text ". In both cases, the rest of the string will be parsed into a list of "
+            , text ". Just like the previous not-emoji case, the rest of the string will be parsed into a list of "
             , inlineCode "Piece"
             , text
                 """s by a recursive call to the function itself. The result is the whole thing concatenated.
                 """
             ]
-        , plainPara
-            "And what's to be concatenated in the \"Found an emoji\" case?"
+        , paragraph
+            []
+            [ text "So what are the result "
+            , inlineCode "Piece"
+            , text "s before the recursive call?"
+            ]
         , limitedLengthMultiline
             isEmojiCaseInputMaxLength
             [ width fill
@@ -766,9 +660,6 @@ replaceEmojis str =
 
 -- No colon case:
 [ Text str ]
-
--- Not emoji case:
-(replaceEmojis <| String.dropLeft secondColonIndex str)
 
 -- Found emoji case:
 [ Text <| String.left firstColonIndex str
