@@ -2,12 +2,16 @@ module Blogs.Emojis_In_Elm exposing
     ( Model
     , Msg
     , init
-    , title
+    , titleStr
     , update
     , view
     )
 
-import Blogs.Common.Contents exposing (userFillableCode_)
+import Blogs.Common.Contents
+    exposing
+        ( title
+        , userFillableCode_
+        )
 import Common.Colors
     exposing
         ( blue
@@ -137,7 +141,7 @@ type CompileStatus result
     | GotError Http.Error
 
 
-title =
+titleStr =
     "Emojis In Elm"
 
 
@@ -296,9 +300,7 @@ view model =
         , blogViewPadding
         , paraSpacing
         ]
-        [ paragraph
-            [ Font.size 32 ]
-            [ text title ]
+        [ title titleStr
         , paragraph
             [ Border.width 2
             , padding 15

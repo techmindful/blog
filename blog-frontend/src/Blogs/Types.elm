@@ -8,6 +8,7 @@ module Blogs.Types exposing
 
 import Blogs.Emojis_In_Elm as Emojis_In_Elm
 import Blogs.Inc as Inc
+import Blogs.Servant_Chat as Servant_Chat
 import Element exposing (Element)
 
 
@@ -18,20 +19,23 @@ type alias Blog =
 
 
 type alias Models =
-    { emojis_Elm_Model : Emojis_In_Elm.Model
+    { emojis_In_Elm_Model : Emojis_In_Elm.Model
+    , servant_Chat_Model : Servant_Chat.Model
     , inc_Model : Inc.Model
     }
 
 
 type Msg
     = Emojis_In_Elm_Msg Emojis_In_Elm.Msg
+    | Servant_Chat_Msg Servant_Chat.Msg
     | Inc_Msg Inc.Msg
     | Other_Msg
 
 
 init : Models
 init =
-    { emojis_Elm_Model = Emojis_In_Elm.init
+    { emojis_In_Elm_Model = Emojis_In_Elm.init
+    , servant_Chat_Model = Servant_Chat.init
     , inc_Model = Inc.init
     }
 
@@ -42,9 +46,9 @@ update msg_ models =
         Emojis_In_Elm_Msg msg ->
             let
                 ( model, cmd ) =
-                    Emojis_In_Elm.update msg models.emojis_Elm_Model
+                    Emojis_In_Elm.update msg models.emojis_In_Elm_Model
             in
-            ( { models | emojis_Elm_Model = model }
+            ( { models | emojis_In_Elm_Model = model }
             , Cmd.map Emojis_In_Elm_Msg cmd
             )
 

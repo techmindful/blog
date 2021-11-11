@@ -1,14 +1,30 @@
 module Blogs.Common.Contents exposing
     ( UserCodePlaceholder
+    , title
     , userFillableCode_
     )
 
 {-| Common _blog_ contents.
 -}
 
+import Element
+    exposing
+        ( Element
+        , paragraph
+        , text
+        )
+import Element.Font as Font
+
 
 type UserCodePlaceholder
     = UserCodePlaceholder String
+
+
+title : String -> Element msg
+title str =
+    paragraph
+        [ Font.size 32 ]
+        [ text str ]
 
 
 {-| A part of code which is supposed to be input by user.
