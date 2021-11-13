@@ -43,7 +43,7 @@ type alias Model =
 
 
 titleStr =
-    "Building a Chat Server with Haskell Servant and WebSockets"
+    "WebSockets in Servant"
 
 
 init : Model
