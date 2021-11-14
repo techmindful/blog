@@ -9,13 +9,15 @@ module Blogs.Servant_Chat exposing
 import Blogs.Common.Contents exposing (title)
 import Common.Contents
     exposing
-        ( codeBlock
+        ( boldText
+        , codeBlock
         , codeBlock__
         , inlineCode
         , italicText
         , plainImage
         , plainPara
         , underlinedNewTabLink
+        , underlinedText
         )
 import Common.Styles
     exposing
@@ -32,6 +34,7 @@ import Element
         , text
         , width
         )
+import Element.Font as Font
 
 
 type Msg
@@ -212,10 +215,10 @@ wsHandler :: NetWS.Connection -> Servant.Handler ()
             [ text "This means "
             , inlineCode "wsHandler"
             , text
-                " is a Servant handler that takes in a websocket connection. The handler doesn't return anything, "
+                " is a Servant handler that takes in a websocket connection. The handler doesn't return anything right away, "
             , italicText "unlike"
             , text
-                " its REST counterparts, but it's free to send and receive data, as long as the connection is alive."
+                " its REST counterparts, but it's free to send and receive data through the websocket connection, as long as it's alive."
             ]
         , paragraph
             []
@@ -235,7 +238,7 @@ wsHandler conn = do
             , inlineCode "sendTextData"
             , text " function from "
             , underlinedNewTabLink
-                "https://jaspervdj.be/websockets/reference/Network-WebSockets.html#v:sendTextData"
+                "https://www.stackage.org/haddock/lts-18.16/websockets-0.12.7.3/Network-WebSockets.html#v:sendTextData"
                 "here"
             , text "."
             ]
@@ -273,6 +276,98 @@ wsHandler conn = do
 ws is open.
 Test ws msg!!!
             """
-        , plainImage "/static/blogs/servant-chat/console.png" "A screenshot of the browser console"
-        , plainPara "That is a crucial first step toward a chat server! I'm still pondering whether, and how to write the second part. But for now, I may have just covered enough of the obscure bits, like which packages to install, which functions to use, where to look at, for you to figure out the rest of the whole implementation, which is pretty fun to try on your own!"
+        , plainImage
+            "/static/blogs/servant-chat/console-server-send.png"
+            "A screenshot of the browser console, after the server sends a message through the websocket."
+        , paragraph
+            []
+            [ text "Our server can actively send a message to the client (browser) now! How about receiving a message from the client? For that, we need the "
+            , underlinedNewTabLink
+                "https://www.stackage.org/haddock/lts-18.16/websockets-0.12.7.3/Network-WebSockets.html#v:receiveDataMessage"
+                "receiveDataMessage"
+            , text " function. "
+            ]
+        , paragraph
+            []
+            [ boldText
+                """One very, very important caveat about this function is that, it blocks. So whenever execution reaches this function, it doesn't move on, until the server receives a message from client through the websocket. Keeping this in mind helps us plan our code for now, and will become critical later on when we write the logic for chatting, where the
+                """
+            , el
+                [ Font.bold
+                , Font.underline
+                ]
+                (text "order")
+            , boldText " of these IO code absolutely matters."
+            ]
+        , paragraph
+            []
+            [ boldText "These IO code, and the blocking nature of this function in particular, had caused me major headache. And it's not mentioned at all." ]
+        , paragraph
+            []
+            [ text "To demonstrate both sending and receiving through the websocket, let's modify "
+            , inlineCode "wsHandler"
+            , text " to echo the message from client back to the client. It's a simple three-step process: Receive message from the client itself; get the lazy ByteString from the message; send the lazy ByteString back to the client."
+            ]
+        , codeBlock__ True
+            """
+wsHandler :: NetWS.Connection -> Servant.Handler ()
+wsHandler conn = do
+
+  -- *Wait* and receive the message from client.
+  -- Execution will *not* continue, until a message is received.
+  msgFromClient :: NetWS.DataMessage <-
+    liftIO $ NetWS.receiveDataMessage conn
+
+  let byteStrFromClient :: LazyByteStr.ByteString
+      byteStrFromClient =
+        case msgFromClient of
+          NetWS.Text byteStr _ -> byteStr
+          NetWS.Binary byteStr -> byteStr
+
+  -- Echo the message back to the client.
+  liftIO $ NetWS.sendTextData conn byteStrFromClient
+            """
+        , paragraph
+            []
+            [ text "The second step where we get the lazy ByteString from the received message is a little more than expected. It's simply because what's received from "
+            , underlinedNewTabLink
+                "https://www.stackage.org/haddock/lts-18.16/websockets-0.12.7.3/Network-WebSockets.html#v:receiveDataMessage"
+                "receiveDataMessage"
+            , text " is of type "
+            , underlinedNewTabLink
+                "https://www.stackage.org/haddock/lts-18.16/websockets-0.12.7.3/Network-WebSockets.html#t:DataMessage"
+                "DataMessage"
+            , text ". We get the lazy ByteString based on its two constructors."
+            ]
+        , paragraph
+            []
+            [ text "Time for testing again! Let's modify the HTML a little, for sending a message to the server, through the websocket:"
+            ]
+        , codeBlock__ True
+            """
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+</head>
+<body>
+  <script>
+    ws = new WebSocket("ws://localhost:9100/ws");
+    ws.onopen = function (event) {
+      // Send a msg, only after ws is open.
+      ws.send("Hello, world!");
+    };
+    // When a msg from server arrives, print it.
+    ws.onmessage = function (e) {
+      console.log(e.data);
+    };
+  </script>
+</body>
+            """
+        , plainPara "After opening the HTML, the browser sends \"Hello, world!\" to the server. The server echoes it back, which we can see is then printed in the console."
+        , plainImage
+            "/static/blogs/servant-chat/console-echo.png"
+            "A screenshot of the browser console, after the server echoes back the message."
+        , plainPara "We can test by changing the \"Hello, world!\" string to others, and see that server will echo it back correspondingly."
+        , plainPara "We have explored sending and receiving messages with Servant. That is a crucial first step toward a chat server! I'm still pondering whether, and how to write the second part. But for now, I may have just covered enough of the obscure bits, like which packages to install, which functions to use, where to look at, for you to figure out the rest of the whole implementation, which is pretty fun to try on your own!"
         ]
