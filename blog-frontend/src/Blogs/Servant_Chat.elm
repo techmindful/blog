@@ -160,7 +160,18 @@ import           Servant.API.WebSocket ( WebSocket )
             """
 type API = "ws" :> WebSocket
             """
-        , plainPara "Simple enough. Though it wasn't so obvious, was it? Now let's fill in the remaining Servant boilerplate:"
+        , plainPara "Simple enough. Though it wasn't so obvious, was it? Now let's fill in the remaining Servant boilerplate."
+        , plainPara "The import list to start with:"
+        , codeBlock__ False
+            """
+import           Control.Monad.IO.Class (liftIO)
+import qualified Data.ByteString.Lazy as LazyByteStr
+import qualified Network.Wai.Handler.Warp as Warp
+import qualified Servant
+import           Servant ( (:>) )
+import           Servant.API.WebSocket ( WebSocket )
+            """
+        , plainPara "The rest of the barebone structure of Servant:"
         , codeBlock__ True
             """
 server :: Servant.Server API
