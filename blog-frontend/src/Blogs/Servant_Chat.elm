@@ -83,7 +83,15 @@ view model =
             [ text "However, I struggled to find any instruction about using websockets with Servant. "
             , underlinedNewTabLink "https://docs.servant.dev/en/stable/" "The official docs"
             , text
-                """ were fairly comprehensive on many other topics, but a section for websockets is missing. From search engine, I could only find two open-source projects as examples, and scarce forum discussions. Hence, I'm motivated to write a reasonably detailed guide on the topic. Those who aren't too familiar with Servant yet, or those who are fast-paced and skipped imperative languages when learning web dev like I did, may find this guide helpful."""
+                """ were fairly comprehensive on many other topics, but a section for websockets is missing. From search engine, I could only find two open-source projects as examples ("""
+            , underlinedNewTabLink
+                "https://github.com/realli/chatqy"
+                "realli/chatqy"
+            , text " and "
+            , underlinedNewTabLink
+                "https://github.com/farnoy/chat"
+                "farnoy/chat"
+            , text """), and scarce forum discussions. Hence, I'm motivated to write a reasonably detailed guide on the topic. Those who aren't too familiar with Servant yet, or those who are fast-paced and skipped imperative languages when learning web dev like I did, may find this guide helpful."""
             ]
         , column
             (warningStyle ++ [ spacing 10 ])
@@ -105,42 +113,27 @@ view model =
             []
             [ text "I'm using the handy "
             , underlinedNewTabLink "https://docs.haskellstack.org/en/stable/README/" "Haskell Stack"
-            , text " as the build tool. You are free to use others. After "
-            , inlineCode "stack new <project-name>"
-            , text ", Let's first put some basic packages in "
-            , inlineCode "package.yaml"
-            , text ", under dependencies:"
+            , text
+                " as the build tool. You are free to use others. These packages are relevant to a Servant server:"
             ]
         , codeBlock__ False
             """
-- base >= 4.7 && < 5
-- bytestring
-- containers
-- errors
-- mtl
 - servant
 - servant-server
-- text
 - wai
 - warp
             """
         , paragraph
+            infoStyle
+            [ text "Version bounds are omitted, as they may be outdated at the time of your reading. Other basic packages are omitted." ]
+        , paragraph
             []
-            [ text "Let's then feed "
-            , inlineCode "app/Main.hs"
-            , text " a bunch of language extensions."
-            ]
+            [ text "A few language extensions are needed:" ]
         , codeBlock__ False
             """
 {-# language DataKinds #-}
-{-# language DeriveGeneric #-}
-{-# language DuplicateRecordFields #-}
-{-# language FlexibleContexts #-}
-{-# language LambdaCase #-}
-{-# language OverloadedLabels #-}
 {-# language OverloadedStrings #-}
 {-# language ScopedTypeVariables #-}
-{-# language TemplateHaskell #-}
 {-# language TypeOperators #-}
             """
         , paragraph
@@ -152,7 +145,7 @@ view model =
             , text "), which isn't a default package from Servant. You can find the type documented "
             , underlinedNewTabLink "https://hackage.haskell.org/package/servant-websockets-2.0.0/docs/Servant-API-WebSocket.html#t:WebSocket" "here"
             , text ". So let's first put "
-            , inlineCode "servant-websockets >= 2.0.0"
+            , inlineCode "servant-websockets"
             , text " in "
             , inlineCode "package.yaml"
             , text "."
@@ -167,7 +160,7 @@ import           Servant.API.WebSocket ( WebSocket )
             """
 type API = "ws" :> WebSocket
             """
-        , plainPara "That wasn't so obvious, was it? Now let's fill in the remaining Servant boilerplate:"
+        , plainPara "Simple enough. Though it wasn't so obvious, was it? Now let's fill in the remaining Servant boilerplate:"
         , codeBlock__ True
             """
 server :: Servant.Server API
@@ -228,7 +221,7 @@ import qualified Network.WebSockets as NetWS
             []
             [ text "The type of "
             , inlineCode "wsHandler"
-            , text " is:"
+            , text " should be:"
             ]
         , codeBlock__ False
             """
@@ -330,7 +323,7 @@ Test ws msg!!!
             []
             [ text "To demonstrate both sending and receiving through the websocket, let's modify "
             , inlineCode "wsHandler"
-            , text " to echo the message from client back to the client. It's a simple three-step process: Receive message from the client itself; get the lazy ByteString from the message; send the lazy ByteString back to the client."
+            , text " to echo the message from client back to the client itself. It's a simple three-step process: Receive message from the client itself; get the lazy ByteString from the message; send the lazy ByteString back to the client."
             ]
         , codeBlock__ True
             """
@@ -378,7 +371,7 @@ wsHandler conn = do
   <script>
     ws = new WebSocket("ws://localhost:9100/ws");
     ws.onopen = function (event) {
-      // Send a msg, only after ws is open.
+      // Send a msg, after ws is open.
       ws.send("Hello, world!");
     };
     // When a msg from server arrives, print it.
@@ -393,5 +386,5 @@ wsHandler conn = do
             "/static/blogs/servant-chat/console-echo.png"
             "A screenshot of the browser console, after the server echoes back the message."
         , plainPara "We can test by changing the \"Hello, world!\" string to others, and see that server will echo it back correspondingly."
-        , plainPara "We have explored sending and receiving messages with Servant. That is a crucial first step toward a chat server! I'm still pondering whether, and how to write the second part. But for now, I may have just covered enough of the obscure bits, like which packages to install, which functions to use, where to look at, for you to figure out the rest of the whole implementation, which is pretty fun to try on your own!"
+        , plainPara "We have explored sending and receiving messages through websockets with Servant. That is a crucial first step toward a chat server! I'm still pondering whether, and how to write the second part. But for now, I may have just covered enough of the obscure bits, like which packages to install, which functions to use, where to look at, for you to figure out the rest of the whole implementation, which is pretty fun to try on your own!"
         ]
