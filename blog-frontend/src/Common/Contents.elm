@@ -107,7 +107,9 @@ underlinedLink_ url =
 underlinedNewTabLink : String -> String -> Element msg
 underlinedNewTabLink url txt =
     newTabLink
-        [ Font.underline ]
+        [ Font.underline
+        , Font.color blue
+        ]
         { url = url
         , label = Element.text txt
         }

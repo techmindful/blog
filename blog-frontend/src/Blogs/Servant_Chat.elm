@@ -7,6 +7,7 @@ module Blogs.Servant_Chat exposing
     )
 
 import Blogs.Common.Contents exposing (title)
+import Common.Colors exposing (lightYellow)
 import Common.Contents
     exposing
         ( boldText
@@ -30,10 +31,14 @@ import Element
         , column
         , el
         , fill
+        , padding
         , paragraph
+        , spacing
         , text
         , width
         )
+import Element.Background as Background
+import Element.Border as Border
 import Element.Font as Font
 
 
@@ -76,6 +81,28 @@ view model =
             , text
                 """ were fairly comprehensive on many other topics, but a section for websockets is missing. From search engine, I could only find two open-source projects as examples, and scarce forum discussions. Hence, I'm motivated to write a reasonably detailed guide on the topic. Those who aren't too familiar with Servant yet, or those who are fast-paced and skipped imperative languages when learning web dev like I did, may find this guide helpful."""
             ]
+        , column
+            [ width fill
+            , spacing 10
+            , Border.width 2
+            , padding 15
+            , Background.color lightYellow
+            , Font.size 18
+            ]
+            [ plainPara "Prerequisites:"
+            , paragraph
+                []
+                [ text "  * You need to know how to build a normal REST API with Servant first. This is documented very well in "
+                , underlinedNewTabLink "https://docs.servant.dev/en/stable/" "the official docs"
+                , text ", so this guide will skip that part."
+                ]
+            , paragraph
+                []
+                [ text "* You do "
+                , underlinedText "not"
+                , text " need to be a type master."
+                ]
+            ]
         , paragraph
             []
             [ text "I'm using the handy "
@@ -98,7 +125,6 @@ view model =
 - text
 - wai
 - warp
-- websockets
             """
         , paragraph
             []

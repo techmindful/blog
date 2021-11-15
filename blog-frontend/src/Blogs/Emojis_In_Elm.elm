@@ -14,8 +14,8 @@ import Blogs.Common.Contents
         )
 import Common.Colors
     exposing
-        ( blue
-        , codeGray
+        ( codeGray
+        , lightBlue
         , red
         )
 import Common.Contents
@@ -304,7 +304,7 @@ view model =
         , paragraph
             [ Border.width 2
             , padding 15
-            , Background.color blue
+            , Background.color lightBlue
             , Font.size 18
             ]
             [ text "Before you continue: Implementing emojis in Elm is very fun! I encourage you to try it yourself first, unless you are out of idea or in a hurry. You may find new ways of implementations!"

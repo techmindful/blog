@@ -27,5 +27,13 @@ green =
     rgb255 0 200 0
 
 
-blue =
+lightBlue =
     rgb255 169 187 242
+
+
+blue =
+    rgb255 0 0 238
+
+
+lightYellow =
+    rgb255 255 253 156
