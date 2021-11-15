@@ -76,7 +76,7 @@ view model =
             [ text "I needed to select a server framework, for buliding the chat server of "
             , underlinedNewTabLink "https://github.com/techmindful/hideout" "Hideout"
             , text
-                """, a private chat service. Haskell Servant stood out, for its strong type safety at levels as high as the API description. Modern chat applications use WebSockets, instead of REST API. This is because when the server receives a message from one client, it should relay the message to other clients right away. With a REST API, the server only has the opportunity to do so when the client initiates a request, typically from polling. In contrast, with an established websocket conneciton, the server has the freedom to send the message to the client immediately."""
+                """, a private chat service. Haskell Servant stood out, for its strong type safety at levels as high as the API description. Modern chat applications use WebSockets, instead of REST API. This is because when the server receives a message from one client, it should relay the message to other clients right away. With a REST API, the server only has the opportunity to do so when the client initiates a request, typically from polling. In contrast, with an established websocket conneciton, the server has the freedom to send the message to the client proactively."""
             ]
         , paragraph
             []
@@ -106,7 +106,7 @@ view model =
                 []
                 [ text "* You do "
                 , underlinedText "not"
-                , text " need to be a type master."
+                , text " need to be a type expert."
                 ]
             ]
         , paragraph
@@ -126,6 +126,14 @@ view model =
         , paragraph
             infoStyle
             [ text "Version bounds are omitted, as they may be outdated at the time of your reading. Other basic packages are omitted." ]
+        , paragraph
+            warningStyle
+            [ text "At the time of writing, Stack reported an error when including those packages, and recommended adding some dependencies in "
+            , inlineCode "extra-deps"
+            , text " in "
+            , inlineCode "stack.yaml"
+            , text ". Following the recommendation solved the problem."
+            ]
         , paragraph
             []
             [ text "A few language extensions are needed:" ]
@@ -166,6 +174,7 @@ type API = "ws" :> WebSocket
             """
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy as LazyByteStr
+import           Data.Text ( Text )
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Servant
 import           Servant ( (:>) )
