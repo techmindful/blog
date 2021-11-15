@@ -12,6 +12,7 @@ import Blogs.Common.Contents
         ( title
         , userFillableCode_
         )
+import Blogs.Common.Styles exposing (commentStyle)
 import Common.Colors
     exposing
         ( codeGray
@@ -302,11 +303,7 @@ view model =
         ]
         [ title titleStr
         , paragraph
-            [ Border.width 2
-            , padding 15
-            , Background.color lightBlue
-            , Font.size 18
-            ]
+            commentStyle
             [ text "Before you continue: Implementing emojis in Elm is very fun! I encourage you to try it yourself first, unless you are out of idea or in a hurry. You may find new ways of implementations!"
             ]
         , paragraph

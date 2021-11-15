@@ -7,6 +7,7 @@ module Blogs.Servant_Chat exposing
     )
 
 import Blogs.Common.Contents exposing (title)
+import Blogs.Common.Styles exposing (commentStyle, infoStyle, warningStyle)
 import Common.Colors exposing (lightYellow)
 import Common.Contents
     exposing
@@ -68,6 +69,9 @@ view model =
         ]
         [ title titleStr
         , paragraph
+            infoStyle
+            [ text "Note: This guide may be expanded into a series about building a chat server." ]
+        , paragraph
             []
             [ text "I needed to select a server framework, for buliding the chat server of "
             , underlinedNewTabLink "https://github.com/techmindful/hideout" "Hideout"
@@ -82,13 +86,7 @@ view model =
                 """ were fairly comprehensive on many other topics, but a section for websockets is missing. From search engine, I could only find two open-source projects as examples, and scarce forum discussions. Hence, I'm motivated to write a reasonably detailed guide on the topic. Those who aren't too familiar with Servant yet, or those who are fast-paced and skipped imperative languages when learning web dev like I did, may find this guide helpful."""
             ]
         , column
-            [ width fill
-            , spacing 10
-            , Border.width 2
-            , padding 15
-            , Background.color lightYellow
-            , Font.size 18
-            ]
+            (warningStyle ++ [ spacing 10 ])
             [ plainPara "Prerequisites:"
             , paragraph
                 []
