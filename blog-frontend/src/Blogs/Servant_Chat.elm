@@ -273,11 +273,15 @@ wsHandler conn = do
 <body>
   <script>
     ws = new WebSocket("ws://localhost:9100/ws");
+
+    // Print a message when ws is open.
     ws.onopen = function (event) {
       console.log("ws is open.");
     };
-    ws.onmessage = function (e) {
-      console.log(e.data);
+
+    // When a msg from server arrives, print it.
+    ws.onmessage = function (event) {
+      console.log(event.data);
     };
   </script>
 </body>
@@ -370,13 +374,15 @@ wsHandler conn = do
 <body>
   <script>
     ws = new WebSocket("ws://localhost:9100/ws");
+
     ws.onopen = function (event) {
       // Send a msg, after ws is open.
       ws.send("Hello, world!");
     };
+
     // When a msg from server arrives, print it.
-    ws.onmessage = function (e) {
-      console.log(e.data);
+    ws.onmessage = function (event) {
+      console.log(event.data);
     };
   </script>
 </body>
