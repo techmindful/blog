@@ -52,7 +52,7 @@ type alias Model =
 
 
 titleStr =
-    "WebSockets in Servant"
+    "WebSockets in Haskell Servant"
 
 
 init : Model
